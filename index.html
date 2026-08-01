@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Casa · Control del hogar</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-brand">
+    <span class="brand-mark">$</span>
+    <span class="brand-name">Casa</span>
+  </div>
+  <div class="topbar-dolar" id="dolarWidget">
+    <label for="dolarInput">USD</label>
+    <input type="number" id="dolarInput" step="0.01" placeholder="0.00" inputmode="decimal">
+    <button id="dolarApiBtn" class="btn-ghost" title="Traer cotización BNA">↻</button>
+  </div>
+</header>
+
+<main id="app">
+
+  <!-- ===================== MÓDULO 1: GASTOS ===================== -->
+  <section class="view" id="view-gastos" data-view="gastos">
+
+    <div class="month-nav">
+      <button id="prevMonth" class="btn-ghost" aria-label="Mes anterior">‹</button>
+      <h1 id="monthLabel">—</h1>
+      <button id="nextMonth" class="btn-ghost" aria-label="Mes siguiente">›</button>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2 class="card-title">Ingresos</h2>
+        <div class="field-row">
+          <label>Sueldo Alejo</label>
+          <input type="number" id="in-sueldoAlejo" inputmode="decimal" placeholder="0">
+        </div>
+        <div class="field-row">
+          <label>Sueldo Belén</label>
+          <input type="number" id="in-sueldoBelen" inputmode="decimal" placeholder="0">
+        </div>
+        <div class="field-row">
+          <label>Sobrante mes anterior</label>
+          <input type="number" id="in-sobrante" inputmode="decimal" placeholder="0">
+          <span class="field-hint" id="sobranteAuto"></span>
+        </div>
+        <div class="field-row">
+          <label>Reintegros</label>
+          <input type="number" id="in-reintegros" inputmode="decimal" placeholder="0">
+        </div>
+        <div class="field-row">
+          <label>Ingresos extra</label>
+          <input type="number" id="in-extra" inputmode="decimal" placeholder="0">
+        </div>
+        <div class="field-row total-row">
+          <label>Ingreso total</label>
+          <output id="out-ingresoTotal">$0</output>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Distribución de caja</h2>
+        <div id="cuentasList" class="cuentas-list"><!-- accounts injected --></div>
+        <div class="field-row total-row">
+          <label>Disponible total</label>
+          <output id="out-disponibleTotal">$0</output>
+        </div>
+      </div>
+    </div>
+
+    <div class="card balance-card">
+      <h2 class="card-title">Balance de caja</h2>
+      <div class="balance-grid">
+        <div class="balance-item">
+          <span class="balance-label">Gasto total</span>
+          <output id="out-gastoTotal">$0</output>
+        </div>
+        <div class="balance-item">
+          <span class="balance-label">Saldo teórico</span>
+          <output id="out-saldoTeorico">$0</output>
+        </div>
+        <div class="balance-item">
+          <span class="balance-label">Disponible real</span>
+          <output id="out-disponibleTotal2">$0</output>
+        </div>
+        <div class="balance-item balance-diff">
+          <span class="balance-label">Diferencia de caja</span>
+          <output id="out-diferenciaCaja">$0</output>
+        </div>
+      </div>
+      <div id="cajaStamp" class="caja-stamp">CUADRA</div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Nuevo gasto</h2>
+      <form id="gastoForm" class="gasto-form">
+        <div class="field-row">
+          <label>Fecha</label>
+          <input type="date" id="g-fecha" required>
+        </div>
+        <div class="field-row">
+          <label>Monto</label>
+          <input type="number" id="g-monto" step="0.01" inputmode="decimal" required>
+        </div>
+        <div class="field-row">
+          <label>Moneda</label>
+          <select id="g-moneda">
+            <option value="ARS">ARS</option>
+            <option value="USD">USD</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <label>Categoría</label>
+          <select id="g-categoria"></select>
+        </div>
+        <div class="field-row">
+          <label>Detalle</label>
+          <input type="text" id="g-detalle" placeholder="Descripción">
+        </div>
+        <div class="field-row">
+          <label>Forma de pago</label>
+          <select id="g-formaPago"></select>
+        </div>
+        <div class="field-row">
+          <label>Entidad</label>
+          <input type="text" id="g-entidad" placeholder="Ciudad, Personal Pay...">
+        </div>
+        <button type="submit" class="btn-primary">Agregar gasto</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Gastos del mes</h2>
+      <div id="gastosList" class="gastos-list"></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2 class="card-title">Gasto por categoría</h2>
+        <div id="categoriaStats" class="stat-bars"></div>
+      </div>
+      <div class="card">
+        <h2 class="card-title">Resumen del mes</h2>
+        <div id="resumenMes" class="resumen-mes"></div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ===================== MÓDULO 2: INVENTARIO ===================== -->
+  <section class="view" id="view-inventario" data-view="inventario" hidden>
+
+    <h1 class="view-title">Inventario</h1>
+
+    <div class="card">
+      <h2 class="card-title">Agregar artículo</h2>
+      <form id="itemForm" class="item-form">
+        <div class="field-row">
+          <label>Nombre</label>
+          <input type="text" id="i-nombre" required>
+        </div>
+        <div class="field-row">
+          <label>Precio</label>
+          <input type="number" id="i-precio" step="0.01" inputmode="decimal">
+        </div>
+        <div class="field-row">
+          <label>Capacidad / tamaño</label>
+          <input type="text" id="i-capacidad" placeholder="ej: 1L, 500g">
+        </div>
+        <div class="field-row">
+          <label>Fecha adquisición</label>
+          <input type="date" id="i-fecha">
+        </div>
+        <div class="field-row">
+          <label>Cantidad</label>
+          <input type="number" id="i-cantidad" value="1" min="0">
+        </div>
+        <button type="submit" class="btn-primary">Agregar artículo</button>
+      </form>
+    </div>
+
+    <div class="card" id="listaComprasCard">
+      <h2 class="card-title">Lista de compras automática</h2>
+      <p class="card-subtitle">Artículos que llegaron a stock 1</p>
+      <div id="listaCompras" class="lista-compras"></div>
+      <div class="field-row total-row">
+        <label>Costo estimado de reposición</label>
+        <output id="out-costoReposicion">$0</output>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Todos los artículos</h2>
+      <div id="inventarioList" class="inventario-list"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Mayor recambio</h2>
+      <div id="recambioStats" class="stat-bars"></div>
+    </div>
+
+  </section>
+
+  <!-- ===================== MÓDULO 3: AHORROS ===================== -->
+  <section class="view" id="view-ahorros" data-view="ahorros" hidden>
+
+    <div class="month-nav">
+      <button id="prevMonthAh" class="btn-ghost" aria-label="Mes anterior">‹</button>
+      <h1 id="monthLabelAh">—</h1>
+      <button id="nextMonthAh" class="btn-ghost" aria-label="Mes siguiente">›</button>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Plataformas</h2>
+      <form id="plataformaForm" class="plataforma-form">
+        <input type="text" id="p-nombre" placeholder="Nombre (ej: Broker/PPI)" required>
+        <select id="p-moneda">
+          <option value="ARS">ARS</option>
+          <option value="USD">USD</option>
+        </select>
+        <button type="submit" class="btn-primary">Agregar plataforma</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Saldos del mes</h2>
+      <div id="ahorrosGrid" class="ahorros-grid"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Patrimonio total</h2>
+      <div class="balance-grid">
+        <div class="balance-item">
+          <span class="balance-label">Patrimonio inicio</span>
+          <output id="out-patrimonioInicio">$0</output>
+        </div>
+        <div class="balance-item">
+          <span class="balance-label">Patrimonio fin</span>
+          <output id="out-patrimonioFin">$0</output>
+        </div>
+        <div class="balance-item">
+          <span class="balance-label">Rendimiento del mes</span>
+          <output id="out-rendimientoMes">0%</output>
+        </div>
+      </div>
+      <p class="card-subtitle">Convertido a pesos con la cotización actual</p>
+    </div>
+
+  </section>
+
+</main>
+
+<nav class="tabbar">
+  <button class="tab-btn active" data-target="gastos">
+    <span class="tab-icon">◧</span><span>Gastos</span>
+  </button>
+  <button class="tab-btn" data-target="inventario">
+    <span class="tab-icon">▤</span><span>Inventario</span>
+  </button>
+  <button class="tab-btn" data-target="ahorros">
+    <span class="tab-icon">◔</span><span>Ahorros</span>
+  </button>
+</nav>
+
+<div id="toast" class="toast" hidden></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

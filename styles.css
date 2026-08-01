@@ -1,0 +1,272 @@
+/* =========================================================
+   TOKENS
+   Paper ledger register: warm paper background, deep ledger-
+   ink green for structure, ochre for USD, rust for deficits.
+   Numbers set in mono (Plex Mono) like a spreadsheet cell;
+   everything else in Plex Sans.
+   ========================================================= */
+:root{
+  --paper: #F5F6F1;
+  --surface: #FFFFFF;
+  --surface-sunken: #EFF1EA;
+  --line: #DEDFD4;
+  --ink: #1C1E1A;
+  --ink-muted: #6C7066;
+  --ink-faint: #9A9D8F;
+
+  --green: #1F5D50;
+  --green-soft: #E5EFEA;
+  --ochre: #A9702F;
+  --ochre-soft: #F5E9D8;
+  --rust: #B0453A;
+  --rust-soft: #F6E4E1;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 1px 2px rgba(28,30,26,0.06), 0 1px 1px rgba(28,30,26,0.04);
+
+  --font-ui: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+*{ box-sizing: border-box; }
+html{ -webkit-text-size-adjust: 100%; }
+body{
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.4;
+  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+}
+h1,h2,h3{ font-family: var(--font-ui); margin: 0; }
+output, .num{ font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+button, input, select{ font-family: inherit; font-size: inherit; }
+:focus-visible{ outline: 2px solid var(--green); outline-offset: 2px; }
+
+/* =========================================================
+   TOPBAR
+   ========================================================= */
+.topbar{
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+.topbar-brand{ display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.brand-mark{
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 6px;
+  background: var(--green); color: #fff;
+  font-family: var(--font-mono); font-weight: 700; font-size: 14px;
+}
+.brand-name{ letter-spacing: 0.01em; }
+.topbar-dolar{
+  display: flex; align-items: center; gap: 6px;
+  background: var(--ochre-soft); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: 4px 8px;
+}
+.topbar-dolar label{ font-size: 11px; color: var(--ochre); font-weight: 600; letter-spacing: 0.04em; }
+.topbar-dolar input{
+  width: 72px; border: none; background: transparent; color: var(--ink);
+  font-family: var(--font-mono); font-weight: 600;
+}
+.topbar-dolar input:focus-visible{ outline: none; }
+
+/* =========================================================
+   LAYOUT
+   ========================================================= */
+#app{ max-width: 720px; margin: 0 auto; padding: 16px; display: block; }
+.view-title{ font-size: 20px; font-weight: 600; margin-bottom: 12px; }
+.grid-2{ display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 640px){
+  .grid-2{ grid-template-columns: 1fr 1fr; }
+}
+
+.month-nav{
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  margin-bottom: 14px;
+}
+.month-nav h1{ font-size: 18px; font-weight: 600; min-width: 150px; text-align: center; text-transform: capitalize; }
+
+.card{
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.card-title{ font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); margin-bottom: 12px; }
+.card-subtitle{ font-size: 12px; color: var(--ink-faint); margin: -6px 0 10px; }
+
+/* =========================================================
+   FORM FIELDS
+   ========================================================= */
+.field-row{
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 6px 0; border-bottom: 1px dashed var(--line);
+}
+.field-row:last-of-type{ border-bottom: none; }
+.field-row label{ font-size: 13px; color: var(--ink-muted); flex-shrink: 0; }
+.field-row input, .field-row select{
+  border: 1px solid transparent; background: var(--surface-sunken);
+  border-radius: var(--radius-sm); padding: 6px 8px; text-align: right;
+  width: 130px; color: var(--ink);
+}
+.field-row input[type="text"], .field-row input[type="date"]{ text-align: left; width: auto; flex: 1; }
+.field-row input:focus, .field-row select:focus{ border-color: var(--green); background: var(--surface); }
+.field-hint{ font-size: 11px; color: var(--ink-faint); }
+.total-row{ margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); border-bottom: none; }
+.total-row label{ font-weight: 600; color: var(--ink); }
+.total-row output{ font-weight: 700; font-size: 16px; }
+
+.gasto-form, .item-form{ display: flex; flex-direction: column; }
+.plataforma-form{ display: flex; gap: 8px; flex-wrap: wrap; }
+.plataforma-form input, .plataforma-form select{
+  border: 1px solid var(--line); background: var(--surface-sunken);
+  border-radius: var(--radius-sm); padding: 8px 10px;
+}
+.plataforma-form input{ flex: 1; min-width: 160px; }
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+.btn-primary{
+  margin-top: 14px; background: var(--green); color: #fff; border: none;
+  border-radius: var(--radius-sm); padding: 11px 16px; font-weight: 600;
+  cursor: pointer; transition: opacity 0.15s ease;
+}
+.btn-primary:hover{ opacity: 0.9; }
+.btn-primary:active{ opacity: 0.8; }
+.btn-ghost{
+  background: transparent; border: 1px solid var(--line); color: var(--ink-muted);
+  border-radius: var(--radius-sm); width: 32px; height: 32px; font-size: 16px;
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+}
+.btn-ghost:hover{ background: var(--surface-sunken); }
+.btn-icon-sm{
+  background: transparent; border: none; color: var(--ink-faint);
+  cursor: pointer; font-size: 15px; padding: 4px 6px; border-radius: var(--radius-sm);
+}
+.btn-icon-sm:hover{ background: var(--rust-soft); color: var(--rust); }
+.btn-minus{
+  background: var(--surface-sunken); border: 1px solid var(--line);
+  border-radius: 999px; width: 30px; height: 30px; font-weight: 700;
+  color: var(--rust); cursor: pointer; flex-shrink: 0;
+}
+.btn-minus:hover{ background: var(--rust-soft); }
+
+/* =========================================================
+   CUENTAS (accounts)
+   ========================================================= */
+.cuentas-list .field-row input{ width: 110px; }
+
+/* =========================================================
+   BALANCE CARD + LEDGER STAMP (signature element)
+   ========================================================= */
+.balance-card{ position: relative; overflow: hidden; }
+.balance-grid{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.balance-item{
+  background: var(--surface-sunken); border-radius: var(--radius-sm);
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 4px;
+}
+.balance-label{ font-size: 11px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.balance-item output{ font-size: 16px; font-weight: 600; }
+.balance-diff output{ font-size: 18px; }
+.caja-stamp{
+  margin-top: 14px; display: inline-block;
+  font-family: var(--font-mono); font-weight: 700; font-size: 13px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 6px 14px; border: 2px solid var(--green); color: var(--green);
+  border-radius: 999px; transform: rotate(-2deg);
+}
+.caja-stamp.mismatch{ border-color: var(--rust); color: var(--rust); }
+
+/* =========================================================
+   LISTS: gastos, inventario, lista de compras
+   ========================================================= */
+.gastos-list, .inventario-list, .lista-compras, .ahorros-grid{ display: flex; flex-direction: column; gap: 8px; }
+
+.list-row{
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 12px; background: var(--surface-sunken); border-radius: var(--radius-sm);
+}
+.list-row-main{ display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.list-row-title{ font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-row-meta{ font-size: 12px; color: var(--ink-faint); }
+.list-row-amount{ font-weight: 600; font-family: var(--font-mono); white-space: nowrap; }
+.list-row-amount.usd{ color: var(--ochre); }
+.list-row-actions{ display: flex; align-items: center; gap: 4px; }
+.tag{
+  display: inline-block; font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.04em; padding: 2px 6px; border-radius: 4px;
+  background: var(--green-soft); color: var(--green); margin-right: 6px;
+}
+.empty-state{ color: var(--ink-faint); font-size: 13px; text-align: center; padding: 18px 0; }
+
+/* Inventory item card */
+.inv-row{ display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--surface-sunken); border-radius: var(--radius-sm); }
+.inv-row.low-stock{ background: var(--rust-soft); }
+.inv-row-info{ flex: 1; min-width: 0; }
+.inv-row-name{ font-weight: 600; font-size: 14px; }
+.inv-row-meta{ font-size: 12px; color: var(--ink-faint); }
+.inv-qty{ font-family: var(--font-mono); font-weight: 700; font-size: 18px; min-width: 24px; text-align: center; }
+
+.lista-compras .list-row{ background: var(--rust-soft); }
+
+/* Ahorros platform card */
+.ahorro-card{ background: var(--surface-sunken); border-radius: var(--radius-sm); padding: 12px; }
+.ahorro-card-head{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.ahorro-card-head h3{ font-size: 14px; font-weight: 600; }
+.ahorro-fields{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ahorro-fields .field-row{ border-bottom: none; padding: 2px 0; flex-direction: column; align-items: flex-start; gap: 4px; }
+.ahorro-fields input{ width: 100%; text-align: left; }
+.ahorro-result{ margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); display: flex; justify-content: space-between; font-size: 13px; }
+.ahorro-result .positive{ color: var(--green); font-weight: 600; }
+.ahorro-result .negative{ color: var(--rust); font-weight: 600; }
+
+/* Stat bars */
+.stat-bars{ display: flex; flex-direction: column; gap: 10px; }
+.stat-bar-row{ display: flex; flex-direction: column; gap: 4px; }
+.stat-bar-labels{ display: flex; justify-content: space-between; font-size: 12px; }
+.stat-bar-labels span:first-child{ color: var(--ink); font-weight: 500; }
+.stat-bar-labels span:last-child{ color: var(--ink-faint); font-family: var(--font-mono); }
+.stat-bar-track{ height: 6px; background: var(--surface-sunken); border-radius: 999px; overflow: hidden; }
+.stat-bar-fill{ height: 100%; background: var(--green); border-radius: 999px; }
+
+.resumen-mes{ display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.resumen-mes .row{ display: flex; justify-content: space-between; }
+.resumen-mes .row output{ font-weight: 600; }
+
+/* =========================================================
+   TAB BAR
+   ========================================================= */
+.tabbar{
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
+  display: flex; background: var(--surface); border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.tab-btn{
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 0 10px; background: none; border: none; color: var(--ink-faint);
+  cursor: pointer; font-size: 11px; font-weight: 500;
+}
+.tab-btn .tab-icon{ font-size: 18px; line-height: 1; }
+.tab-btn.active{ color: var(--green); }
+
+/* =========================================================
+   TOAST
+   ========================================================= */
+.toast{
+  position: fixed; left: 50%; bottom: 78px; transform: translateX(-50%);
+  background: var(--ink); color: var(--paper); padding: 9px 16px;
+  border-radius: 999px; font-size: 13px; z-index: 50; box-shadow: var(--shadow);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce){
+  *{ transition: none !important; animation: none !important; }
+}
