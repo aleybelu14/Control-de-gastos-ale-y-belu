@@ -138,9 +138,9 @@
     </div>
 
     <div class="actions-row">
-      <button type="button" class="btn-outline" id="toggleFijoMes">+ Gastos fijos del mes</button>
-      <button type="button" class="btn-outline" id="toggleFijoTarjeta">+ Gastos fijos de la tarjeta</button>
-      <button type="button" class="btn-outline" id="toggleNuevoGasto">+ Nuevo gasto</button>
+      <button type="button" class="btn-accent" id="toggleFijoMes">+ Gastos fijos del mes</button>
+      <button type="button" class="btn-accent" id="toggleFijoTarjeta">+ Gastos fijos de la tarjeta</button>
+      <button type="button" class="btn-accent" id="toggleNuevoGasto">+ Nuevo gasto</button>
     </div>
 
     <div class="card" id="panelFijo" hidden>
@@ -224,7 +224,7 @@
 
     <div class="card">
       <h2 class="card-title">Gastos del mes</h2>
-      <p class="card-subtitle">Orden: fijos, fijos de tarjeta, tarjeta suelta y después los gastos comunes por fecha.</p>
+      <p class="card-subtitle">Orden: primero los gastos fijos del mes, después los variables (cuotas de tarjeta fijas primero, y el resto por fecha).</p>
       <div class="actions-row">
         <input type="text" id="gastosSearch" class="search-input" placeholder="Buscar por detalle, categoría o entidad...">
       </div>

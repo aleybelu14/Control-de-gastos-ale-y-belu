@@ -24,6 +24,7 @@
   --green-soft: #E7F7ED;
   --amber: #D97706;
   --amber-soft: #FDF0DB;
+  --orange: #EA580C;
 
   --radius: 16px;
   --radius-sm: 10px;
@@ -229,6 +230,14 @@ input, select{ -webkit-appearance: none; appearance: none; }
 }
 .btn-outline:hover{ background: var(--surface-sunken); }
 .btn-outline.small{ padding: 6px 10px; font-size: 12px; }
+
+.btn-accent{
+  background: var(--orange); color: #fff; border: none;
+  border-radius: var(--radius-sm); padding: 10px 16px; font-weight: 700;
+  cursor: pointer; font-size: 13.5px;
+}
+.btn-accent:hover{ filter: brightness(1.08); }
+.btn-accent:active{ filter: brightness(0.95); }
 
 .btn-ghost{
   background: transparent; border: 1px solid var(--line); color: var(--ink-muted);

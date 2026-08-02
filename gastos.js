@@ -270,8 +270,7 @@ function renderGastosUnificados() {
 
   const fijosMes = filtrados.filter((g) => g.esFijo && !esTarjeta(g));
   const fijosTarjeta = filtrados.filter((g) => g.esFijo && esTarjeta(g));
-  const tarjetaSueltos = filtrados.filter((g) => !g.esFijo && esTarjeta(g));
-  const comunes = filtrados.filter((g) => !g.esFijo && !esTarjeta(g))
+  const variablesResto = filtrados.filter((g) => !g.esFijo)
     .slice().sort((a, b) => (a.fecha || "").localeCompare(b.fecha || "")); // cronológico: primer día arriba
 
   if (!filtrados.length) {
@@ -279,14 +278,16 @@ function renderGastosUnificados() {
     return;
   }
 
-  const totalTarjeta = [...fijosTarjeta, ...tarjetaSueltos]
-    .reduce((s, g) => s + (g.moneda === "USD" ? (g.monto || 0) * cotizacion : (g.monto || 0)), 0);
-
+  // Igual que en la planilla: primero fijos del mes, después variables
+  // (arranca con las cuotas de tarjeta fijas y sigue con todo lo demás —
+  // tarjeta suelta y gastos normales — mezclado por fecha).
   let html = "";
   if (fijosMes.length) html += `<div class="gastos-subhead">Gastos fijos del mes</div>` + fijosMes.map(renderFijoRow).join("");
-  if (fijosTarjeta.length) html += `<div class="gastos-subhead">Gastos fijos en tarjeta</div>` + fijosTarjeta.map(renderFijoRow).join("");
-  if (tarjetaSueltos.length) html += `<div class="gastos-subhead">Tarjeta de crédito${totalTarjeta ? " · " + fmtARS(totalTarjeta) : ""}</div>` + tarjetaSueltos.map(gastoRow).join("");
-  if (comunes.length) html += `<div class="gastos-subhead">Gastos del mes</div>` + comunes.map(gastoRow).join("");
+  if (fijosTarjeta.length || variablesResto.length) {
+    html += `<div class="gastos-subhead">Gastos variables</div>`;
+    html += fijosTarjeta.map(renderFijoRow).join("");
+    html += variablesResto.map(gastoRow).join("");
+  }
 
   rerenderPreservingFocus(wrap, () => {
     wrap.innerHTML = html;
@@ -378,6 +379,11 @@ function wireFijoRowEvents(wrap) {
     btn.addEventListener("click", async () => {
       const g = gastosCache.find((x) => x.id === btn.dataset.quitarMes);
       await deleteRow(col.gastos, btn.dataset.quitarMes);
+      if (g && g.fijoId) {
+        const quitados = [...(mesData.gastosFijosQuitados || []), g.fijoId];
+        mesData = { ...mesData, gastosFijosQuitados: quitados };
+        await upsertDoc(col.meses, currentMonth, { gastosFijosQuitados: quitados });
+      }
       if (g) pushAction(makeDeleteAction(`Quitar gasto fijo (solo este mes): ${g.detalle}`, col.gastos, g.id, stripId(g)));
       toast("Se quitó de este mes — el próximo mes se vuelve a cargar solo");
     });
@@ -392,30 +398,41 @@ function wireFijoRowEvents(wrap) {
   });
 }
 
-// Aplica los gastos fijos activos al mes actual, una sola vez por mes y por
-// fijo (queda registrado en meses/{mes}.gastosFijosAplicados). Si el usuario
-// borra manualmente el gasto generado ese mes ("Quitar solo este mes"), no
-// vuelve a aparecer. Si borra la plantilla completa ("Dejar de repetir"),
-// tampoco se vuelve a aplicar en ningún mes futuro.
+// Aplica los gastos fijos activos al mes actual usando un ID DETERMINÍSTICO
+// (mes + fijoId) y upsert con merge — no "crear y después marcar como
+// aplicado" (eso era lo que se podía cortar a mitad de camino con un F5 y
+// duplicaba). Así, sin importar cuántas veces se llame esta función — por
+// dos listeners en simultáneo, por una recarga interrumpida, por lo que
+// sea — siempre termina pisando el MISMO documento, nunca crea uno nuevo.
+// "Quitar solo este mes" se guarda aparte, en meses/{mes}.gastosFijosQuitados
+// (una lista de fijoId que este mes NO hay que aplicar); "Dejar de repetir"
+// borra la plantilla del catálogo y ya no vuelve a aparecer en ningún mes.
 //
-// Se llama desde varios listeners (mes, fijos) que pueden disparar casi al
-// mismo tiempo (típicamente al hacer F5) — el lock evita que dos llamadas
-// simultáneas lean "todavía no se aplicó" y agreguen el mismo gasto dos veces.
+// Compatibilidad con meses cargados antes de este cambio: esos gastos fijos
+// quedaron con un ID al azar (no el determinístico de ahora). Antes de crear
+// nada, se chequea si el fijo YA tiene un gasto ese mes (con cualquier ID) —
+// si ya existe, no se crea uno nuevo con el ID determinístico al lado.
 const mesesAplicandoFijos = new Set();
 async function aplicarFijosDelMes() {
   const mes = currentMonth;
   if (!mes || !fijosCache.length) return;
   if (mesesAplicandoFijos.has(mes)) return;
 
-  const aplicados = mesData.gastosFijosAplicados || [];
-  const pendientes = fijosCache.filter((f) => f.activo !== false && !aplicados.includes(f.id));
+  const quitados = mesData.gastosFijosQuitados || [];
+  const activos = fijosCache.filter((f) => f.activo !== false && !quitados.includes(f.id));
+  if (!activos.length) return;
+
+  const yaAplicados = new Set(
+    gastosCache.filter((g) => g.esFijo && g.mes === mes && g.fijoId).map((g) => g.fijoId)
+  );
+  const pendientes = activos.filter((f) => !yaAplicados.has(f.id));
   if (!pendientes.length) return;
 
   mesesAplicandoFijos.add(mes);
   try {
-    const nuevosAplicados = [...aplicados];
     for (const f of pendientes) {
-      await addRow(col.gastos, {
+      const gastoId = `${mes}__fijo__${f.id}`;
+      await upsertDoc(col.gastos, gastoId, {
         mes,
         fecha: `${mes}-01`,
         monto: f.monto || 0,
@@ -427,10 +444,7 @@ async function aplicarFijosDelMes() {
         esFijo: true,
         fijoId: f.id
       });
-      nuevosAplicados.push(f.id);
     }
-    if (currentMonth === mes) mesData = { ...mesData, gastosFijosAplicados: nuevosAplicados };
-    await upsertDoc(col.meses, mes, { gastosFijosAplicados: nuevosAplicados });
   } finally {
     mesesAplicandoFijos.delete(mes);
   }

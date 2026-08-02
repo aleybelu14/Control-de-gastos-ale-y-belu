@@ -98,13 +98,19 @@ recién cuando llegue el resumen (otro mes). Sí se cuentan en el
   "createdAt": "<serverTimestamp>"
 }
 ```
-Se cargan una única vez. Cada vez que se abre un mes, la app revisa
-`meses/{mes}.gastosFijosAplicados` (array de ids de `gastos_fijos`) y
-crea automáticamente en `gastos` los que todavía no se aplicaron ese
-mes — así no hay que tipearlos a mano. Si se borra manualmente el
-gasto generado ese mes, no vuelve a recrearse (queda en el array de
-aplicados). Editar el monto de un gasto fijo solo afecta las
-próximas veces que se aplique, no los gastos ya generados.
+Se cargan una única vez en el catálogo. Cada vez que se abre un mes,
+la app crea (o pisa) en `gastos` un documento con **ID
+determinístico** `{mes}__fijo__{idDelFijo}` por cada fijo activo — por
+ejemplo `2026-08__fijo__abc123`. Al ser siempre el mismo ID, aunque la
+función que los aplica se llame varias veces (dos listeners en
+simultáneo, una recarga interrumpida a mitad de guardado, lo que sea)
+nunca puede crear un duplicado: como mucho pisa el mismo documento
+con los mismos datos. Si se quiere sacar un fijo puntual de un mes sin
+tocar el catálogo, su id se guarda en
+`meses/{mes}.gastosFijosQuitados` para que no se vuelva a crear ese
+mes. Editar el monto de un gasto fijo actualiza el documento de ese
+mes y el catálogo (para que los meses futuros ya arranquen con el
+valor nuevo) — los meses anteriores no se tocan.
 
 ### `inventario/{autoId}`
 ```json
