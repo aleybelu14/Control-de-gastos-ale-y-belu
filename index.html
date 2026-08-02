@@ -1580,10 +1580,12 @@ function gastoRow(g) {
 }
 
 // ---- Gastos fijos (catálogo) ---------------------------------------------
-// El catálogo solo guarda nombre/categoría/forma de pago/entidad — el monto
-// NO se guarda ahí como "default" para otros meses. El mes en el que se
-// crea el fijo arranca con el monto que se tipeó acá; cualquier otro mes
-// (pasado o futuro) arranca en $0 hasta que se cargue a mano en ESE mes.
+// El catálogo guarda nombre/categoría/forma de pago/entidad — y también
+// "montoInicial" + "mesCreacion", que SOLO sirven para que aplicarFijosDelMes
+// sepa con qué monto arrancar el mes en el que se creó el fijo. Cualquier
+// otro mes (pasado o futuro) arranca en $0. La instancia de "gastos" la crea
+// SIEMPRE aplicarFijosDelMes (un único lugar) — así no hay carrera posible
+// entre "guardar con el monto tipeado" y "guardar con $0".
 async function onAddFijo(e) {
   e.preventDefault();
   const montoInicial = Number(document.getElementById("f-monto").value) || 0;
@@ -1593,25 +1595,13 @@ async function onAddFijo(e) {
     categoria: document.getElementById("f-categoria").value,
     formaPago: document.getElementById("f-formaPago").value,
     entidad: document.getElementById("f-entidad").value.trim(),
-    activo: true
+    activo: true,
+    montoInicial,
+    mesCreacion: currentMonth
   };
   if (!data.nombre || !montoInicial) { toast("Completá nombre y monto"); return; }
   const ref = await addRow(col.gastosFijos, data);
   pushAction(makeAddAction(`Agregar gasto fijo: ${data.nombre}`, col.gastosFijos, data, ref.id));
-  // crea de una la instancia de ESTE mes con el monto tipeado (los demás
-  // meses van a arrancar en $0 vía aplicarFijosDelMes)
-  await upsertDoc(col.gastos, `${currentMonth}__fijo__${ref.id}`, {
-    mes: currentMonth,
-    fecha: `${currentMonth}-01`,
-    monto: montoInicial,
-    moneda: data.moneda,
-    categoria: data.categoria,
-    detalle: data.nombre,
-    formaPago: data.formaPago,
-    entidad: data.entidad,
-    esFijo: true,
-    fijoId: ref.id
-  });
   e.target.reset();
   document.getElementById("panelFijo").hidden = true;
   toast("Gasto fijo agregado — en los demás meses vas a tener que cargar el monto a mano");
@@ -1670,10 +1660,11 @@ function wireFijoRowEvents(wrap) {
 // sea — siempre termina pisando el MISMO documento, nunca crea uno nuevo.
 // Un gasto fijo solo deja de aplicarse si se borra del catálogo (botón ✕).
 //
-// IMPORTANTE: acá SIEMPRE se crea con monto $0, nunca copiando el catálogo
-// ni el valor de otro mes — cada mes es independiente y hay que cargarle el
-// monto a mano. Si el fijo se creó este mes, esta función no toca nada
-// (onAddFijo ya escribió la instancia del mes con el monto tipeado).
+// Esta es la ÚNICA función que crea instancias de gastos fijos (para
+// evitar la carrera de tener dos lugares escribiendo el mismo mes con
+// valores distintos). Usa "montoInicial" del catálogo SOLO si este es el
+// mes en el que se creó el fijo (mesCreacion) — cualquier otro mes arranca
+// siempre en $0, sin importar cuántas veces se llame esta función.
 const mesesAplicandoFijos = new Set();
 async function aplicarFijosDelMes() {
   const mes = currentMonth;
@@ -1693,10 +1684,11 @@ async function aplicarFijosDelMes() {
   try {
     for (const f of pendientes) {
       const gastoId = `${mes}__fijo__${f.id}`;
+      const monto = f.mesCreacion === mes ? (f.montoInicial || 0) : 0;
       await upsertDoc(col.gastos, gastoId, {
         mes,
         fecha: `${mes}-01`,
-        monto: 0,
+        monto,
         moneda: f.moneda || "ARS",
         categoria: f.categoria || "Otro",
         detalle: f.nombre,
