@@ -6,22 +6,40 @@
 <title>Casa · Control del hogar</title>
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<header class="topbar">
-  <div class="topbar-brand">
-    <span class="brand-mark">$</span>
-    <span class="brand-name">Casa</span>
-  </div>
-  <div class="topbar-dolar" id="dolarWidget">
-    <label for="dolarInput">USD</label>
-    <input type="number" id="dolarInput" step="0.01" placeholder="0.00" inputmode="decimal">
-    <button id="dolarApiBtn" class="btn-ghost" title="Traer cotización BNA">↻</button>
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-row">
+      <div>
+        <div class="hero-eyebrow">CASA</div>
+        <h1 class="hero-title">Control del hogar</h1>
+      </div>
+      <div class="hero-dolar" id="dolarWidget">
+        <label for="dolarInput">USD</label>
+        <input type="number" id="dolarInput" step="0.01" placeholder="0.00" inputmode="decimal">
+        <button id="dolarApiBtn" class="btn-ghost" title="Traer cotización BNA">↻</button>
+      </div>
+    </div>
+    <div class="hero-stats" id="heroStats"><!-- pills dinámicos --></div>
   </div>
 </header>
+
+<nav class="tabbar">
+  <button class="tab-btn active" data-target="gastos">
+    <span class="tab-icon">◧</span><span>Gastos</span>
+  </button>
+  <button class="tab-btn" data-target="inventario">
+    <span class="tab-icon">▤</span><span>Inventario</span>
+  </button>
+  <button class="tab-btn" data-target="ahorros">
+    <span class="tab-icon">◔</span><span>Ahorros</span>
+  </button>
+</nav>
 
 <main id="app">
 
@@ -32,6 +50,21 @@
       <button id="prevMonth" class="btn-ghost" aria-label="Mes anterior">‹</button>
       <h1 id="monthLabel">—</h1>
       <button id="nextMonth" class="btn-ghost" aria-label="Mes siguiente">›</button>
+    </div>
+
+    <div class="grid-3">
+      <div class="stat-card">
+        <div class="stat-card-label">Ingreso total</div>
+        <div class="stat-card-value blue" id="stat-ingreso">$0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Gasto en efectivo/débito</div>
+        <div class="stat-card-value red" id="stat-gasto">$0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Disponible total</div>
+        <div class="stat-card-value green" id="stat-disponible">$0</div>
+      </div>
     </div>
 
     <div class="grid-2">
@@ -76,9 +109,10 @@
 
     <div class="card balance-card">
       <h2 class="card-title">Balance de caja</h2>
+      <p class="card-subtitle">No incluye gastos con tarjeta de crédito (esos se pagan el mes que llega el resumen).</p>
       <div class="balance-grid">
         <div class="balance-item">
-          <span class="balance-label">Gasto total</span>
+          <span class="balance-label">Gasto total (efec./déb.)</span>
           <output id="out-gastoTotal">$0</output>
         </div>
         <div class="balance-item">
@@ -95,6 +129,44 @@
         </div>
       </div>
       <div id="cajaStamp" class="caja-stamp">CUADRA</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title-row">
+        <h2 class="card-title">Gastos fijos del mes</h2>
+      </div>
+      <p class="card-subtitle">Se definen una vez y se cargan solos cada mes — no hace falta tipearlos de nuevo.</p>
+      <form id="fijoForm" class="fijo-form">
+        <div class="field-row">
+          <label>Nombre</label>
+          <input type="text" id="f-nombre" placeholder="ej: Alquiler, Expensas, Internet" required>
+        </div>
+        <div class="field-row">
+          <label>Monto</label>
+          <input type="number" id="f-monto" step="0.01" inputmode="decimal" required>
+        </div>
+        <div class="field-row">
+          <label>Moneda</label>
+          <select id="f-moneda">
+            <option value="ARS">ARS</option>
+            <option value="USD">USD</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <label>Categoría</label>
+          <select id="f-categoria"></select>
+        </div>
+        <div class="field-row">
+          <label>Forma de pago</label>
+          <select id="f-formaPago"></select>
+        </div>
+        <div class="field-row">
+          <label>Entidad</label>
+          <input type="text" id="f-entidad" placeholder="Ciudad, Personal Pay...">
+        </div>
+        <button type="submit" class="btn-primary">Agregar gasto fijo</button>
+      </form>
+      <div id="fijosList" class="fijos-list" style="margin-top:14px;"></div>
     </div>
 
     <div class="card">
@@ -136,8 +208,21 @@
     </div>
 
     <div class="card">
-      <h2 class="card-title">Gastos del mes</h2>
+      <h2 class="card-title">Gastos del mes (efectivo / débito / transferencia)</h2>
       <div id="gastosList" class="gastos-list"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title-row">
+        <h2 class="card-title">Tarjeta de crédito — resumen del mes</h2>
+        <span class="tag amber" id="tag-cantidadTarjeta">0 gastos</span>
+      </div>
+      <p class="card-subtitle">Se acumula aparte porque se paga cuando llega el resumen, no impacta la caja de este mes.</p>
+      <div id="tarjetaList" class="tarjeta-list"></div>
+      <div class="field-row total-row">
+        <label>Total tarjeta del mes</label>
+        <output id="out-totalTarjeta">$0</output>
+      </div>
     </div>
 
     <div class="grid-2">
@@ -166,6 +251,10 @@
           <input type="text" id="i-nombre" required>
         </div>
         <div class="field-row">
+          <label>Categoría</label>
+          <select id="i-categoria"></select>
+        </div>
+        <div class="field-row">
           <label>Precio</label>
           <input type="number" id="i-precio" step="0.01" inputmode="decimal">
         </div>
@@ -187,7 +276,7 @@
 
     <div class="card" id="listaComprasCard">
       <h2 class="card-title">Lista de compras automática</h2>
-      <p class="card-subtitle">Artículos que llegaron a stock 1</p>
+      <p class="card-subtitle">Artículos con stock 1 o 0 (por reponer)</p>
       <div id="listaCompras" class="lista-compras"></div>
       <div class="field-row total-row">
         <label>Costo estimado de reposición</label>
@@ -196,13 +285,23 @@
     </div>
 
     <div class="card">
-      <h2 class="card-title">Todos los artículos</h2>
+      <div class="card-title-row">
+        <h2 class="card-title">Todos los artículos</h2>
+      </div>
+      <div class="chips-row" id="categoriaChips"></div>
       <div id="inventarioList" class="inventario-list"></div>
     </div>
 
-    <div class="card">
-      <h2 class="card-title">Mayor recambio</h2>
-      <div id="recambioStats" class="stat-bars"></div>
+    <div class="grid-2">
+      <div class="card">
+        <h2 class="card-title">Mayor recambio</h2>
+        <div id="recambioStats" class="stat-bars"></div>
+      </div>
+      <div class="card">
+        <h2 class="card-title">Duración promedio del stock</h2>
+        <p class="card-subtitle">Días entre que se repone y se agota</p>
+        <div id="duracionStats" class="stat-bars"></div>
+      </div>
     </div>
 
   </section>
@@ -224,7 +323,7 @@
           <option value="ARS">ARS</option>
           <option value="USD">USD</option>
         </select>
-        <button type="submit" class="btn-primary">Agregar plataforma</button>
+        <button type="submit" class="btn-primary" style="margin-top:0;">Agregar plataforma</button>
       </form>
     </div>
 
@@ -256,17 +355,79 @@
 
 </main>
 
-<nav class="tabbar">
-  <button class="tab-btn active" data-target="gastos">
-    <span class="tab-icon">◧</span><span>Gastos</span>
-  </button>
-  <button class="tab-btn" data-target="inventario">
-    <span class="tab-icon">▤</span><span>Inventario</span>
-  </button>
-  <button class="tab-btn" data-target="ahorros">
-    <span class="tab-icon">◔</span><span>Ahorros</span>
-  </button>
-</nav>
+<!-- ===================== MODAL: editar artículo ===================== -->
+<div class="modal-backdrop" id="editModal" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Editar artículo</h2>
+      <button class="modal-close" id="editModalClose" type="button">✕</button>
+    </div>
+    <form id="editForm">
+      <input type="hidden" id="e-id">
+      <div class="field-row">
+        <label>Nombre</label>
+        <input type="text" id="e-nombre" required>
+      </div>
+      <div class="field-row">
+        <label>Categoría</label>
+        <select id="e-categoria"></select>
+      </div>
+      <div class="field-row">
+        <label>Precio</label>
+        <input type="number" id="e-precio" step="0.01" inputmode="decimal">
+      </div>
+      <div class="field-row">
+        <label>Capacidad / tamaño</label>
+        <input type="text" id="e-capacidad">
+      </div>
+      <div class="field-row">
+        <label>Fecha adquisición</label>
+        <input type="date" id="e-fecha">
+      </div>
+      <div class="field-row">
+        <label>Cantidad</label>
+        <input type="number" id="e-cantidad" min="0">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-outline" id="editModalCancel">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar cambios</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== MODAL: agregar stock (reposición) ===================== -->
+<div class="modal-backdrop" id="addStockModal" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Agregar al stock</h2>
+      <button class="modal-close" id="addStockModalClose" type="button">✕</button>
+    </div>
+    <form id="addStockForm">
+      <input type="hidden" id="as-id">
+      <div class="field-row">
+        <label>Fecha de compra</label>
+        <input type="date" id="as-fecha" required>
+      </div>
+      <div class="field-row">
+        <label>Cantidad a agregar</label>
+        <input type="number" id="as-cantidad" min="1" value="1" required>
+      </div>
+      <div class="field-row">
+        <label>Dónde se compró</label>
+        <input type="text" id="as-lugar" placeholder="ej: Coto, Farmacity...">
+      </div>
+      <div class="field-row">
+        <label>Precio unitario</label>
+        <input type="number" id="as-precio" step="0.01" inputmode="decimal">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-outline" id="addStockModalCancel">Cancelar</button>
+        <button type="submit" class="btn-primary">Registrar compra</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <div id="toast" class="toast" hidden></div>
 

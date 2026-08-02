@@ -8,15 +8,14 @@ para hosting gratuito en GitHub Pages.
 
 ```
 index.html
-css/styles.css
-js/
-  firebase-config.js   ← poné acá tus credenciales de Firebase
-  db.js                ← inicialización de Firestore + helpers genéricos
-  utils.js             ← constantes (categorías, cuentas, formas de pago) y formatos
-  gastos.js             Módulo 1
-  inventario.js         Módulo 2
-  ahorros.js             Módulo 3
-  main.js               tabs + cotización del dólar + arranque
+styles.css
+firebase-config.js   ← poné acá tus credenciales de Firebase
+db.js                ← inicialización de Firestore + helpers genéricos
+utils.js             ← constantes (categorías, cuentas, formas de pago) y formatos
+gastos.js             Módulo 1
+inventario.js         Módulo 2
+ahorros.js             Módulo 3
+main.js               tabs + cotización del dólar + arranque
 ```
 
 ## 2. Modelo de datos en Firestore
@@ -68,6 +67,8 @@ mes. La suma de todas da el "Disponible total" del mes.
   "detalle": "alquiler abril",
   "formaPago": "TRANS | DEB | EF | App | CRED | MODO | QR | Otro",
   "entidad": "Personal Pay",
+  "esFijo": true,
+  "fijoId": "<id de gastos_fijos, si vino de ahí>",
   "createdAt": "<serverTimestamp>"
 }
 ```
@@ -75,22 +76,69 @@ mes. La suma de todas da el "Disponible total" del mes.
 ofrecer crearlo automáticamente la primera vez que corras la app — el
 error de consola trae un link directo).
 
+Los gastos con `formaPago: "CRED"` (tarjeta de crédito) no se listan
+junto a los demás: aparecen en la card aparte "Tarjeta de crédito —
+resumen del mes" y **no** se descuentan del "Balance de caja" del
+mes en curso, porque ese gasto en realidad va a salir de la cuenta
+recién cuando llegue el resumen (otro mes). Sí se cuentan en el
+"Resumen del mes" como referencia.
+
+### `gastos_fijos/{autoId}` (catálogo, no tiene mes)
+```json
+{
+  "nombre": "Alquiler",
+  "monto": 788525.63,
+  "moneda": "ARS | USD",
+  "categoria": "Vivienda (alq+exp)",
+  "formaPago": "TRANS",
+  "entidad": "Personal Pay",
+  "activo": true,
+  "createdAt": "<serverTimestamp>"
+}
+```
+Se cargan una única vez. Cada vez que se abre un mes, la app revisa
+`meses/{mes}.gastosFijosAplicados` (array de ids de `gastos_fijos`) y
+crea automáticamente en `gastos` los que todavía no se aplicaron ese
+mes — así no hay que tipearlos a mano. Si se borra manualmente el
+gasto generado ese mes, no vuelve a recrearse (queda en el array de
+aplicados). Editar el monto de un gasto fijo solo afecta las
+próximas veces que se aplique, no los gastos ya generados.
+
 ### `inventario/{autoId}`
 ```json
 {
   "nombre": "Papel higiénico",
+  "categoria": "Baño",
   "precio": 4200,
   "capacidad": "4 rollos",
   "fechaAdquisicion": "2026-03-15",
   "cantidad": 3,
   "vecesDescontado": 7,
+  "fechaUltimaReposicion": "2026-03-15",
+  "fechasAgotamiento": ["2026-02-01", "2026-03-15"],
+  "duraciones": [{ "desde": "2026-01-01", "hasta": "2026-02-01", "dias": 31 }],
+  "historialCompras": [
+    { "fecha": "2026-03-15", "cantidad": 3, "lugar": "Coto", "precio": 4200 }
+  ],
   "createdAt": "<serverTimestamp>"
 }
 ```
 `vecesDescontado` se incrementa cada vez que se usa el botón "-1" y
-alimenta la estadística "Mayor recambio". Cuando `cantidad` llega
-exactamente a `1`, el artículo aparece solo en la Lista de compras
-automática (es un filtro en el cliente, no un campo separado).
+alimenta la estadística "Mayor recambio". Cuando `cantidad` llega a
+`1` **o** a `0`, el artículo aparece en la Lista de compras
+automática (es un filtro en el cliente, no un campo separado) — a
+`0` sigue existiendo el artículo, solo que sin stock.
+
+Cada vez que el botón "-1" hace que `cantidad` llegue a `0`, se
+guarda la fecha en `fechasAgotamiento` y se cierra un ciclo en
+`duraciones` (días entre la última reposición y el agotamiento). Con
+eso se calcula "Duración promedio del stock" sin tocar `cantidad`.
+
+El botón "+" abre un formulario (fecha, cantidad, dónde se compró,
+precio) que suma a `cantidad`, actualiza `precio`/`fechaAdquisicion`/
+`fechaUltimaReposicion` y agrega una entrada a `historialCompras`
+para las estadísticas. El botón "✎" edita cualquier campo del
+artículo sin borrarlo.
 
 ### `ahorros_plataformas/{autoId}`
 ```json
@@ -122,7 +170,7 @@ vigente.
 2. Firestore Database → crear base de datos → modo producción.
 3. Configuración del proyecto → Tus apps → ícono web (`</>`) → registrá
    una app → copiá el objeto de config.
-4. Pegalo en `js/firebase-config.js`.
+4. Pegalo en `firebase-config.js`.
 
 ### Reglas de seguridad recomendadas
 
@@ -137,7 +185,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     match /{collection}/{docId} {
       allow read, write: if collection in
-        ['meses', 'cuentas', 'gastos', 'inventario',
+        ['meses', 'cuentas', 'gastos', 'gastos_fijos', 'inventario',
          'ahorros_plataformas', 'ahorros_saldos', 'config'];
     }
   }
@@ -170,4 +218,4 @@ quedar en `https://<usuario>.github.io/<repo>/`.
   contra el teórico (ingresos − gastos) y muestra un sello **CUADRA /
   DESCUADRE** para detectar diferencias rápido.
 - Las categorías, formas de pago y cuentas fijas están definidas en
-  `js/utils.js` — son fáciles de editar si tu esquema cambia.
+  `utils.js` — son fáciles de editar si tu esquema cambia.

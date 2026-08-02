@@ -18,6 +18,7 @@ export const col = {
   meses: collection(dbase, "meses"),
   cuentas: collection(dbase, "cuentas"),
   gastos: collection(dbase, "gastos"),
+  gastosFijos: collection(dbase, "gastos_fijos"),
   inventario: collection(dbase, "inventario"),
   plataformas: collection(dbase, "ahorros_plataformas"),
   saldos: collection(dbase, "ahorros_saldos"),

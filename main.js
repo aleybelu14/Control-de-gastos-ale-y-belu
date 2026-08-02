@@ -1,7 +1,7 @@
 import { col, watchDoc, upsertDoc } from "./db.js";
-import { debounce, toast } from "./utils.js";
-import { initGastos, setCotizacion } from "./gastos.js";
-import { initInventario } from "./inventario.js";
+import { debounce, toast, fmtARS, onUpdate } from "./utils.js";
+import { initGastos, setCotizacion, gastoTarjetaARS, getCajaCuadra } from "./gastos.js";
+import { initInventario, getListaComprasCount } from "./inventario.js";
 import { initAhorros } from "./ahorros.js";
 
 // ---- Tabs -------------------------------------------------------------
@@ -13,6 +13,7 @@ tabButtons.forEach((btn) => {
     const target = btn.dataset.target;
     tabButtons.forEach((b) => b.classList.toggle("active", b === btn));
     views.forEach((v) => (v.hidden = v.dataset.view !== target));
+    window.scrollTo({ top: 0, behavior: "smooth" });
   });
 });
 
@@ -53,7 +54,26 @@ dolarApiBtn.addEventListener("click", async () => {
   }
 });
 
+// ---- Pills del header (datos en vivo de gastos + inventario) -----------
+function renderHeroStats() {
+  const wrap = document.getElementById("heroStats");
+  const compras = getListaComprasCount();
+  const tarjeta = gastoTarjetaARS();
+  const cuadra = getCajaCuadra();
+  const pills = [];
+  pills.push(compras > 0
+    ? `<span class="hero-pill pill-danger">🛒 ${compras} por reponer</span>`
+    : `<span class="hero-pill">🛒 Stock al día</span>`);
+  if (tarjeta > 0) pills.push(`<span class="hero-pill pill-amber">💳 Tarjeta: ${fmtARS(tarjeta)}</span>`);
+  pills.push(cuadra
+    ? `<span class="hero-pill">✅ Caja cuadra</span>`
+    : `<span class="hero-pill pill-danger">⚠ Caja descuadrada</span>`);
+  wrap.innerHTML = pills.join("");
+}
+onUpdate(renderHeroStats);
+
 // ---- Arranque de módulos ------------------------------------------------
 initGastos();
 initInventario();
 initAhorros();
+renderHeroStats();

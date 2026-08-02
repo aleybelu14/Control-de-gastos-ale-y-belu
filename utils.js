@@ -16,6 +16,11 @@ export const CUENTAS_FIJAS = [
   "Personal Pay Reservas", "Efectivo", "YPF Belu", "YPF Ale"
 ];
 
+export const CATEGORIAS_INVENTARIO = [
+  "Cocina", "Baño", "Limpieza", "Living/Comedor", "Dormitorio",
+  "Lavadero", "Herramientas", "Mascotas", "Otro"
+];
+
 export const MESES_LARGO = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
@@ -54,12 +59,40 @@ export function fmtPct(n) {
   return v.toLocaleString("es-AR", { maximumFractionDigits: 1 }) + "%";
 }
 
+export function fmtDate(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
+}
+
+export function daysBetween(isoFrom, isoTo) {
+  if (!isoFrom || !isoTo) return null;
+  const a = new Date(isoFrom + "T00:00:00");
+  const b = new Date(isoTo + "T00:00:00");
+  if (isNaN(a) || isNaN(b)) return null;
+  return Math.max(0, Math.round((b - a) / 86400000));
+}
+
+export function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export function debounce(fn, ms = 500) {
   let t;
   return (...args) => {
     clearTimeout(t);
     t = setTimeout(() => fn(...args), ms);
   };
+}
+
+// Mini pub-sub: los módulos avisan "notifyUpdate()" después de renderizar,
+// y main.js escucha para refrescar los pills del header con datos en vivo.
+export function notifyUpdate() {
+  window.dispatchEvent(new CustomEvent("casita:update"));
+}
+export function onUpdate(cb) {
+  window.addEventListener("casita:update", cb);
 }
 
 export function toast(msg) {
