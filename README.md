@@ -73,9 +73,10 @@ mes. La suma de todas da el "Disponible total" del mes.
   "createdAt": "<serverTimestamp>"
 }
 ```
-Índice compuesto necesario: `mes ASC, fecha DESC` (Firestore te va a
-ofrecer crearlo automáticamente la primera vez que corras la app — el
-error de consola trae un link directo).
+Índice: esta consulta filtra por `mes` y ordena la fecha del lado del
+cliente (no en la query) a propósito, para no depender de que crees un
+índice compuesto en Firestore — así funciona directo desde el primer
+uso sin configuración extra.
 
 Los gastos con `formaPago: "CRED"` (tarjeta de crédito) no se listan
 junto a los demás: aparecen en la card aparte "Tarjeta de crédito —
@@ -226,3 +227,6 @@ quedar en `https://<usuario>.github.io/<repo>/`.
   No incluye campos que se tipean de a poco (sueldos, saldos de
   cuentas, cotización) para no llenar el historial con estados
   intermedios mientras escribís.
+- Si alguna vez falla una consulta a Firestore (por ejemplo, permisos
+  mal configurados), ahora aparece un toast avisando en vez de fallar
+  en silencio — mirá la consola del navegador (F12) para el detalle.

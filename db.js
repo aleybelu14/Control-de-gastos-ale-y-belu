@@ -27,14 +27,26 @@ export const col = {
 
 // ---- Genéricos --------------------------------------------------------
 export function watchDoc(colRef, id, cb) {
-  return onSnapshot(doc(colRef, id), (snap) => cb(snap.exists() ? snap.data() : null, snap));
+  return onSnapshot(
+    doc(colRef, id),
+    (snap) => cb(snap.exists() ? snap.data() : null, snap),
+    (err) => reportSnapshotError(err)
+  );
 }
 export function watchCollection(q, cb) {
-  return onSnapshot(q, (snap) => {
-    const rows = [];
-    snap.forEach((d) => rows.push({ id: d.id, ...d.data() }));
-    cb(rows);
-  });
+  return onSnapshot(
+    q,
+    (snap) => {
+      const rows = [];
+      snap.forEach((d) => rows.push({ id: d.id, ...d.data() }));
+      cb(rows);
+    },
+    (err) => reportSnapshotError(err)
+  );
+}
+function reportSnapshotError(err) {
+  console.error("Firestore snapshot error:", err);
+  window.dispatchEvent(new CustomEvent("casita:error", { detail: err }));
 }
 export async function upsertDoc(colRef, id, data) {
   return setDoc(doc(colRef, id), data, { merge: true });

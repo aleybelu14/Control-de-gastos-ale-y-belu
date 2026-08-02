@@ -88,9 +88,9 @@ async function switchMonth(mesId) {
     render();
   });
 
-  const qGastos = query(col.gastos, where("mes", "==", mesId), orderBy("fecha", "desc"));
+  const qGastos = query(col.gastos, where("mes", "==", mesId));
   unsubGastos = watchCollection(qGastos, (rows) => {
-    gastosCache = rows;
+    gastosCache = rows.slice().sort((a, b) => (b.fecha || "").localeCompare(a.fecha || ""));
     renderGastos();
     renderTarjeta();
     render();

@@ -73,6 +73,11 @@ function renderHeroStats() {
 }
 onUpdate(renderHeroStats);
 
+window.addEventListener("casita:error", (e) => {
+  toast("Error de conexión con la base de datos — revisá la consola (F12)");
+  console.error(e.detail);
+});
+
 // ---- Arranque de módulos ------------------------------------------------
 initHistoryUI();
 initGastos();
