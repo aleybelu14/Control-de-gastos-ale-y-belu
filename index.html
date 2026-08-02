@@ -1660,30 +1660,30 @@ function wireFijoRowEvents(wrap) {
 // sea — siempre termina pisando el MISMO documento, nunca crea uno nuevo.
 // Un gasto fijo solo deja de aplicarse si se borra del catálogo (botón ✕).
 //
-// Esta es la ÚNICA función que crea instancias de gastos fijos (para
-// evitar la carrera de tener dos lugares escribiendo el mismo mes con
-// valores distintos). Usa "montoInicial" del catálogo SOLO si este es el
-// mes en el que se creó el fijo (mesCreacion) — cualquier otro mes arranca
-// siempre en $0, sin importar cuántas veces se llame esta función.
+// Dos reglas importantes:
+// 1) Nunca se crea en meses ANTERIORES a "mesCreacion" — un fijo nuevo solo
+//    aparece desde el mes en que se cargó hacia adelante, nunca hacia atrás.
+// 2) Para saber si ya existe, se hace una lectura directa a Firestore
+//    (getDocOnce) en vez de confiar en el cache reactivo "gastosCache" — ese
+//    cache puede quedar un instante desactualizado cuando se navega rápido
+//    entre meses (ej: 2 atrás y 2 adelante), y confiar en él hacía que a
+//    veces se recreara con $0 un mes que ya tenía un valor cargado.
 const mesesAplicandoFijos = new Set();
 async function aplicarFijosDelMes() {
   const mes = currentMonth;
   if (!mes || !fijosCache.length) return;
   if (mesesAplicandoFijos.has(mes)) return;
 
-  const activos = fijosCache.filter((f) => f.activo !== false);
+  const activos = fijosCache.filter((f) => f.activo !== false && (!f.mesCreacion || mes >= f.mesCreacion));
   if (!activos.length) return;
-
-  const yaAplicados = new Set(
-    gastosCache.filter((g) => g.esFijo && g.mes === mes && g.fijoId).map((g) => g.fijoId)
-  );
-  const pendientes = activos.filter((f) => !yaAplicados.has(f.id));
-  if (!pendientes.length) return;
 
   mesesAplicandoFijos.add(mes);
   try {
-    for (const f of pendientes) {
+    for (const f of activos) {
+      if (currentMonth !== mes) break; // el usuario ya cambió de mes, no seguir escribiendo acá
       const gastoId = `${mes}__fijo__${f.id}`;
+      const existente = await getDocOnce(col.gastos, gastoId);
+      if (existente) continue; // ya existe (con el valor que sea) — no tocar
       const monto = f.mesCreacion === mes ? (f.montoInicial || 0) : 0;
       await upsertDoc(col.gastos, gastoId, {
         mes,
