@@ -3,6 +3,7 @@ import {
   CATEGORIAS, FORMAS_PAGO, CUENTAS_FIJAS, slug, monthId, shiftMonth, monthLabel,
   fmtARS, fmtUSD, debounce, toast, notifyUpdate
 } from "./utils.js";
+import { pushAction, makeAddAction, makeDeleteAction, stripId } from "./history.js";
 
 let currentMonth = monthId();
 let cotizacion = 1000;
@@ -157,14 +158,19 @@ async function onAddGasto(e) {
     entidad: document.getElementById("g-entidad").value.trim()
   };
   if (!data.monto) { toast("Ingresá un monto"); return; }
-  await addRow(col.gastos, data);
+  const ref = await addRow(col.gastos, data);
+  pushAction(makeAddAction(`Agregar gasto: ${data.detalle || data.categoria}`, col.gastos, data, ref.id));
   e.target.reset();
   document.getElementById("g-fecha").value = new Date().toISOString().slice(0, 10);
   toast("Gasto agregado");
 }
 
 async function onDeleteGasto(id) {
+  const g = gastosCache.find((x) => x.id === id);
   await deleteRow(col.gastos, id);
+  if (g) {
+    pushAction(makeDeleteAction(`Eliminar gasto: ${g.detalle || g.categoria}`, col.gastos, id, stripId(g)));
+  }
   toast("Gasto eliminado");
 }
 
@@ -234,7 +240,8 @@ async function onAddFijo(e) {
     activo: true
   };
   if (!data.nombre || !data.monto) { toast("Completá nombre y monto"); return; }
-  await addRow(col.gastosFijos, data);
+  const ref = await addRow(col.gastosFijos, data);
+  pushAction(makeAddAction(`Agregar gasto fijo: ${data.nombre}`, col.gastosFijos, data, ref.id));
   e.target.reset();
   toast("Gasto fijo agregado — se va a cargar solo cada mes");
 }
@@ -264,7 +271,11 @@ function renderFijos() {
   });
   wrap.querySelectorAll("[data-del-fijo]").forEach((btn) => {
     btn.addEventListener("click", async () => {
+      const f = fijosCache.find((x) => x.id === btn.dataset.delFijo);
       await deleteRow(col.gastosFijos, btn.dataset.delFijo);
+      if (f) {
+        pushAction(makeDeleteAction(`Eliminar gasto fijo: ${f.nombre}`, col.gastosFijos, f.id, stripId(f)));
+      }
       toast("Gasto fijo eliminado (no se va a volver a cargar)");
     });
   });

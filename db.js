@@ -48,6 +48,12 @@ export async function updateRow(colRef, id, data) {
 export async function deleteRow(colRef, id) {
   return deleteDoc(doc(colRef, id));
 }
+// Recrea un documento con un id específico y el contenido exacto que tenía
+// (se usa para deshacer un "eliminar" — a diferencia de upsertDoc, pisa todo
+// el documento en vez de mezclar, para restaurarlo tal cual estaba).
+export async function restoreDoc(colRef, id, data) {
+  return setDoc(doc(colRef, id), data);
+}
 export async function getDocOnce(colRef, id) {
   const snap = await getDoc(doc(colRef, id));
   return snap.exists() ? snap.data() : null;

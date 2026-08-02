@@ -100,12 +100,21 @@ input, select{ -webkit-appearance: none; appearance: none; }
    ========================================================= */
 .tabbar{
   position: sticky; top: 0; z-index: 30;
-  display: flex; gap: 4px; background: var(--surface);
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface);
   border-bottom: 1px solid var(--line);
-  padding: 0 16px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  padding: 0 10px 0 16px;
+}
+.tabbar-scroll{
+  display: flex; gap: 4px; flex: 1; min-width: 0;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
-.tabbar::-webkit-scrollbar{ display: none; }
+.tabbar-scroll::-webkit-scrollbar{ display: none; }
+.history-controls{ display: flex; align-items: center; gap: 6px; flex-shrink: 0; padding: 8px 0; }
+.history-controls .btn-ghost{ width: 32px; height: 32px; font-size: 16px; }
+.history-controls .btn-ghost:disabled{ opacity: 0.32; cursor: not-allowed; }
+.history-controls .btn-ghost:disabled:hover{ background: transparent; }
 .tab-btn{
   flex: 0 0 auto;
   display: flex; align-items: center; gap: 6px;

@@ -1,6 +1,7 @@
 import { col, query, where, orderBy, watchCollection, addRow, upsertDoc } from "./db.js";
 import { monthId, shiftMonth, monthLabel, fmtARS, debounce, toast } from "./utils.js";
 import { getCotizacion } from "./gastos.js";
+import { pushAction, makeAddAction } from "./history.js";
 
 let currentMonthAh = monthId();
 let plataformas = [];
@@ -25,7 +26,8 @@ async function onAddPlataforma(e) {
   const nombre = document.getElementById("p-nombre").value.trim();
   const moneda = document.getElementById("p-moneda").value;
   if (!nombre) return;
-  await addRow(col.plataformas, { nombre, moneda });
+  const ref = await addRow(col.plataformas, { nombre, moneda });
+  pushAction(makeAddAction(`Agregar plataforma: ${nombre}`, col.plataformas, { nombre, moneda }, ref.id));
   e.target.reset();
   toast("Plataforma agregada");
 }

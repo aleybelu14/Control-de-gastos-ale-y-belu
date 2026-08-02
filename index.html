@@ -30,15 +30,21 @@
 </header>
 
 <nav class="tabbar">
-  <button class="tab-btn active" data-target="gastos">
-    <span class="tab-icon">◧</span><span>Gastos</span>
-  </button>
-  <button class="tab-btn" data-target="inventario">
-    <span class="tab-icon">▤</span><span>Inventario</span>
-  </button>
-  <button class="tab-btn" data-target="ahorros">
-    <span class="tab-icon">◔</span><span>Ahorros</span>
-  </button>
+  <div class="tabbar-scroll">
+    <button class="tab-btn active" data-target="gastos">
+      <span class="tab-icon">◧</span><span>Gastos</span>
+    </button>
+    <button class="tab-btn" data-target="inventario">
+      <span class="tab-icon">▤</span><span>Inventario</span>
+    </button>
+    <button class="tab-btn" data-target="ahorros">
+      <span class="tab-icon">◔</span><span>Ahorros</span>
+    </button>
+  </div>
+  <div class="history-controls">
+    <button id="undoBtn" class="btn-ghost" type="button" title="Deshacer" disabled>↶</button>
+    <button id="redoBtn" class="btn-ghost" type="button" title="Rehacer" disabled>↷</button>
+  </div>
 </nav>
 
 <main id="app">

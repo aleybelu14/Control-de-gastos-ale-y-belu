@@ -2,6 +2,7 @@ import { col, query, orderBy, watchCollection, addRow, updateRow, deleteRow } fr
 import {
   CATEGORIAS_INVENTARIO, fmtARS, fmtDate, daysBetween, todayISO, toast, notifyUpdate
 } from "./utils.js";
+import { pushAction, makeAddAction, makeDeleteAction, makeUpdateAction, stripId } from "./history.js";
 
 let itemsCache = [];
 let unsub = null;
@@ -60,7 +61,8 @@ async function onAddItem(e) {
     historialCompras: []
   };
   if (!data.nombre) { toast("Ingresá un nombre"); return; }
-  await addRow(col.inventario, data);
+  const ref = await addRow(col.inventario, data);
+  pushAction(makeAddAction(`Agregar artículo: ${data.nombre}`, col.inventario, data, ref.id));
   e.target.reset();
   document.getElementById("i-cantidad").value = 1;
   toast("Artículo agregado");
@@ -70,6 +72,12 @@ async function onAddItem(e) {
 async function onMinus(item) {
   const cantidadAnterior = item.cantidad || 0;
   const nuevaCantidad = Math.max(0, cantidadAnterior - 1);
+  const before = {
+    cantidad: cantidadAnterior,
+    vecesDescontado: item.vecesDescontado || 0,
+    fechasAgotamiento: item.fechasAgotamiento || [],
+    duraciones: item.duraciones || []
+  };
   const patch = {
     cantidad: nuevaCantidad,
     vecesDescontado: (item.vecesDescontado || 0) + 1
@@ -86,10 +94,21 @@ async function onMinus(item) {
     patch.duraciones = duraciones;
   }
   await updateRow(col.inventario, item.id, patch);
+  const after = {
+    cantidad: patch.cantidad,
+    vecesDescontado: patch.vecesDescontado,
+    fechasAgotamiento: patch.fechasAgotamiento || before.fechasAgotamiento,
+    duraciones: patch.duraciones || before.duraciones
+  };
+  pushAction(makeUpdateAction(`Descontar 1: ${item.nombre}`, col.inventario, item.id, before, after));
 }
 
 async function onDelete(id) {
+  const item = itemsCache.find((i) => i.id === id);
   await deleteRow(col.inventario, id);
+  if (item) {
+    pushAction(makeDeleteAction(`Eliminar artículo: ${item.nombre}`, col.inventario, id, stripId(item)));
+  }
   toast("Artículo eliminado");
 }
 
@@ -108,6 +127,7 @@ function onOpenEdit(item) {
 async function onSubmitEdit(e) {
   e.preventDefault();
   const id = document.getElementById("e-id").value;
+  const item = itemsCache.find((i) => i.id === id);
   const data = {
     nombre: document.getElementById("e-nombre").value.trim(),
     categoria: document.getElementById("e-categoria").value,
@@ -118,6 +138,17 @@ async function onSubmitEdit(e) {
   };
   if (!data.nombre) { toast("Ingresá un nombre"); return; }
   await updateRow(col.inventario, id, data);
+  if (item) {
+    const before = {
+      nombre: item.nombre || "",
+      categoria: item.categoria || "",
+      precio: item.precio || 0,
+      capacidad: item.capacidad || "",
+      fechaAdquisicion: item.fechaAdquisicion || "",
+      cantidad: item.cantidad ?? 0
+    };
+    pushAction(makeUpdateAction(`Editar artículo: ${data.nombre}`, col.inventario, id, before, data));
+  }
   closeModal(document.getElementById("editModal"));
   toast("Artículo actualizado");
 }
@@ -144,13 +175,22 @@ async function onSubmitAddStock(e) {
   if (!cantidadAgregar) { toast("Ingresá una cantidad"); return; }
 
   const historialCompras = [...(item.historialCompras || []), { fecha, cantidad: cantidadAgregar, lugar, precio }];
-  await updateRow(col.inventario, id, {
+  const before = {
+    cantidad: item.cantidad || 0,
+    precio: item.precio || 0,
+    fechaAdquisicion: item.fechaAdquisicion || "",
+    fechaUltimaReposicion: item.fechaUltimaReposicion || "",
+    historialCompras: item.historialCompras || []
+  };
+  const after = {
     cantidad: (item.cantidad || 0) + cantidadAgregar,
     precio: precio || item.precio || 0,
     fechaAdquisicion: fecha,
     fechaUltimaReposicion: fecha,
     historialCompras
-  });
+  };
+  await updateRow(col.inventario, id, after);
+  pushAction(makeUpdateAction(`Agregar stock: ${item.nombre}`, col.inventario, id, before, after));
   closeModal(document.getElementById("addStockModal"));
   toast("Compra registrada");
 }

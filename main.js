@@ -3,6 +3,7 @@ import { debounce, toast, fmtARS, onUpdate } from "./utils.js";
 import { initGastos, setCotizacion, gastoTarjetaARS, getCajaCuadra } from "./gastos.js";
 import { initInventario, getListaComprasCount } from "./inventario.js";
 import { initAhorros } from "./ahorros.js";
+import { initHistoryUI } from "./history.js";
 
 // ---- Tabs -------------------------------------------------------------
 const tabButtons = document.querySelectorAll(".tab-btn");
@@ -73,6 +74,7 @@ function renderHeroStats() {
 onUpdate(renderHeroStats);
 
 // ---- Arranque de módulos ------------------------------------------------
+initHistoryUI();
 initGastos();
 initInventario();
 initAhorros();

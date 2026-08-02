@@ -12,6 +12,7 @@ styles.css
 firebase-config.js   ← poné acá tus credenciales de Firebase
 db.js                ← inicialización de Firestore + helpers genéricos
 utils.js             ← constantes (categorías, cuentas, formas de pago) y formatos
+history.js           ← deshacer/rehacer (últimas 5 acciones)
 gastos.js             Módulo 1
 inventario.js         Módulo 2
 ahorros.js             Módulo 3
@@ -219,3 +220,9 @@ quedar en `https://<usuario>.github.io/<repo>/`.
   DESCUADRE** para detectar diferencias rápido.
 - Las categorías, formas de pago y cuentas fijas están definidas en
   `utils.js` — son fáciles de editar si tu esquema cambia.
+- Los botones ↶ / ↷ de la barra de arriba deshacen/rehacen las últimas
+  5 acciones "de un click" (agregar, eliminar o editar un gasto, un
+  gasto fijo, un artículo de inventario o una plataforma de ahorro).
+  No incluye campos que se tipean de a poco (sueldos, saldos de
+  cuentas, cotización) para no llenar el historial con estados
+  intermedios mientras escribís.
