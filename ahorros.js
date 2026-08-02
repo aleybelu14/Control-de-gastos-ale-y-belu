@@ -1,5 +1,5 @@
 import { col, query, where, orderBy, watchCollection, addRow, upsertDoc } from "./db.js";
-import { monthId, shiftMonth, monthLabel, fmtARS, debounce, toast } from "./utils.js";
+import { monthId, shiftMonth, monthLabel, fmtARS, debounce, toast, rerenderPreservingFocus } from "./utils.js";
 import { getCotizacion } from "./gastos.js";
 import { pushAction, makeAddAction } from "./history.js";
 
@@ -73,45 +73,47 @@ function renderGrid() {
     renderTotales();
     return;
   }
-  wrap.innerHTML = plataformas.map((p) => {
-    const s = saldos[p.id] || { inicio: 0, fin: 0, movimientos: 0 };
-    const ganancia = (s.fin || 0) - (s.inicio || 0) - (s.movimientos || 0);
-    const rendimiento = s.inicio ? (ganancia / s.inicio) * 100 : 0;
-    const cls = ganancia >= 0 ? "positive" : "negative";
-    return `
-      <div class="ahorro-card">
-        <div class="ahorro-card-head">
-          <h3>${p.nombre}</h3>
-          <span class="tag">${p.moneda}</span>
-        </div>
-        <div class="ahorro-fields">
-          <div class="field-row">
-            <label>Inicio</label>
-            <input type="number" step="0.01" inputmode="decimal" data-field="inicio" data-pid="${p.id}" value="${s.inicio || 0}">
+  rerenderPreservingFocus(wrap, () => {
+    wrap.innerHTML = plataformas.map((p) => {
+      const s = saldos[p.id] || { inicio: 0, fin: 0, movimientos: 0 };
+      const ganancia = (s.fin || 0) - (s.inicio || 0) - (s.movimientos || 0);
+      const rendimiento = s.inicio ? (ganancia / s.inicio) * 100 : 0;
+      const cls = ganancia >= 0 ? "positive" : "negative";
+      return `
+        <div class="ahorro-card">
+          <div class="ahorro-card-head">
+            <h3>${p.nombre}</h3>
+            <span class="tag">${p.moneda}</span>
           </div>
-          <div class="field-row">
-            <label>Fin</label>
-            <input type="number" step="0.01" inputmode="decimal" data-field="fin" data-pid="${p.id}" value="${s.fin || 0}">
+          <div class="ahorro-fields">
+            <div class="field-row">
+              <label>Inicio</label>
+              <input type="number" step="0.01" inputmode="decimal" data-field="inicio" data-pid="${p.id}" value="${s.inicio || 0}">
+            </div>
+            <div class="field-row">
+              <label>Fin</label>
+              <input type="number" step="0.01" inputmode="decimal" data-field="fin" data-pid="${p.id}" value="${s.fin || 0}">
+            </div>
+            <div class="field-row">
+              <label>Aportes/retiros netos</label>
+              <input type="number" step="0.01" inputmode="decimal" data-field="movimientos" data-pid="${p.id}" value="${s.movimientos || 0}">
+            </div>
           </div>
-          <div class="field-row">
-            <label>Aportes/retiros netos</label>
-            <input type="number" step="0.01" inputmode="decimal" data-field="movimientos" data-pid="${p.id}" value="${s.movimientos || 0}">
+          <div class="ahorro-result">
+            <span>Ganancia: <span class="${cls}" id="ganancia-${p.id}">${p.moneda === "USD" ? "US$" : "$"}${ganancia.toLocaleString("es-AR", { maximumFractionDigits: 2 })}</span></span>
+            <span>Rendimiento: <span class="${cls}" id="rendimiento-${p.id}">${rendimiento.toFixed(2)}%</span></span>
           </div>
         </div>
-        <div class="ahorro-result">
-          <span>Ganancia: <span class="${cls}" id="ganancia-${p.id}">${p.moneda === "USD" ? "US$" : "$"}${ganancia.toLocaleString("es-AR", { maximumFractionDigits: 2 })}</span></span>
-          <span>Rendimiento: <span class="${cls}" id="rendimiento-${p.id}">${rendimiento.toFixed(2)}%</span></span>
-        </div>
-      </div>
-    `;
-  }).join("");
+      `;
+    }).join("");
 
-  wrap.querySelectorAll("input[data-field]").forEach((input) => {
-    input.addEventListener("input", debounce((e) => {
-      saveSaldo(e.target.dataset.pid, e.target.dataset.field, e.target.value);
-      renderResultados();
-      renderTotales();
-    }, 600));
+    wrap.querySelectorAll("input[data-field]").forEach((input) => {
+      input.addEventListener("input", debounce((e) => {
+        saveSaldo(e.target.dataset.pid, e.target.dataset.field, e.target.value);
+        renderResultados();
+        renderTotales();
+      }, 600));
+    });
   });
 
   renderTotales();

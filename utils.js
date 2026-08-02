@@ -86,6 +86,39 @@ export function debounce(fn, ms = 500) {
   };
 }
 
+// Reconstruye el HTML de un contenedor sin robarle el tipeo al usuario: si
+// justo en ese momento hay un input/select con foco adentro del contenedor,
+// después de reconstruir se le restaura el valor tipeado, el cursor y el
+// foco. Se usa en toda lista que se repinta sola por un snapshot de
+// Firestore mientras el usuario puede estar escribiendo en uno de sus campos.
+export function rerenderPreservingFocus(container, rebuildFn) {
+  const active = document.activeElement;
+  let focusInfo = null;
+  if (active && container.contains(active) && active.matches("input, select, textarea")) {
+    focusInfo = {
+      key: JSON.stringify(active.dataset || {}),
+      tag: active.tagName,
+      value: active.value,
+      selectionStart: active.selectionStart,
+      selectionEnd: active.selectionEnd
+    };
+  }
+  rebuildFn();
+  if (focusInfo) {
+    const candidates = container.querySelectorAll("input, select, textarea");
+    for (const el of candidates) {
+      if (el.tagName === focusInfo.tag && JSON.stringify(el.dataset || {}) === focusInfo.key) {
+        el.value = focusInfo.value;
+        el.focus();
+        if (typeof focusInfo.selectionStart === "number") {
+          try { el.setSelectionRange(focusInfo.selectionStart, focusInfo.selectionEnd); } catch (err) { /* algunos inputs numéricos no soportan selección */ }
+        }
+        break;
+      }
+    }
+  }
+}
+
 // Mini pub-sub: los módulos avisan "notifyUpdate()" después de renderizar,
 // y main.js escucha para refrescar los pills del header con datos en vivo.
 export function notifyUpdate() {

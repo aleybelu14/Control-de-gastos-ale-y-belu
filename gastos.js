@@ -1,7 +1,7 @@
 import { col, query, where, orderBy, watchDoc, watchCollection, upsertDoc, addRow, updateRow, deleteRow, getDocOnce } from "./db.js";
 import {
   CATEGORIAS, FORMAS_PAGO, CUENTAS_FIJAS, slug, monthId, shiftMonth, monthLabel,
-  fmtARS, fmtUSD, debounce, toast, notifyUpdate
+  fmtARS, fmtUSD, debounce, toast, notifyUpdate, rerenderPreservingFocus
 } from "./utils.js";
 import { pushAction, makeAddAction, makeDeleteAction, stripId } from "./history.js";
 
@@ -133,14 +133,16 @@ function saveIngresos() {
 
 function renderCuentas() {
   const wrap = document.getElementById("cuentasList");
-  wrap.innerHTML = CUENTAS_FIJAS.map((nombre) => `
-    <div class="field-row">
-      <label>${nombre}</label>
-      <input type="number" step="0.01" inputmode="decimal" data-cuenta="${nombre}" value="${cuentasData[nombre] ?? 0}">
-    </div>
-  `).join("");
-  wrap.querySelectorAll("input[data-cuenta]").forEach((input) => {
-    input.addEventListener("input", debounce((e) => saveCuenta(e.target.dataset.cuenta, e.target.value), 500));
+  rerenderPreservingFocus(wrap, () => {
+    wrap.innerHTML = CUENTAS_FIJAS.map((nombre) => `
+      <div class="field-row">
+        <label>${nombre}</label>
+        <input type="number" step="0.01" inputmode="decimal" data-cuenta="${nombre}" value="${cuentasData[nombre] ?? 0}">
+      </div>
+    `).join("");
+    wrap.querySelectorAll("input[data-cuenta]").forEach((input) => {
+      input.addEventListener("input", debounce((e) => saveCuenta(e.target.dataset.cuenta, e.target.value), 500));
+    });
   });
 }
 
@@ -260,31 +262,33 @@ function renderFijos() {
     wrap.innerHTML = `<div class="empty-state">Todavía no cargaste gastos fijos.</div>`;
     return;
   }
-  wrap.innerHTML = fijosCache.map((f) => `
-    <div class="list-row ok">
-      <div class="list-row-main">
-        <div class="list-row-title"><span class="tag">${f.categoria || "Sin categoría"}</span>${f.nombre}</div>
-        <div class="list-row-meta">${f.formaPago || ""} ${f.entidad ? "· " + f.entidad : ""} · se aplica todos los meses</div>
+  rerenderPreservingFocus(wrap, () => {
+    wrap.innerHTML = fijosCache.map((f) => `
+      <div class="list-row ok">
+        <div class="list-row-main">
+          <div class="list-row-title"><span class="tag">${f.categoria || "Sin categoría"}</span>${f.nombre}</div>
+          <div class="list-row-meta">${f.formaPago || ""} ${f.entidad ? "· " + f.entidad : ""} · se aplica todos los meses</div>
+        </div>
+        <div class="list-row-actions">
+          <input type="number" class="fijo-monto-input" step="0.01" data-fijo-monto="${f.id}" value="${f.monto || 0}">
+          <button class="btn-icon-sm" data-del-fijo="${f.id}" title="Eliminar gasto fijo">✕</button>
+        </div>
       </div>
-      <div class="list-row-actions">
-        <input type="number" class="fijo-monto-input" step="0.01" data-fijo-monto="${f.id}" value="${f.monto || 0}">
-        <button class="btn-icon-sm" data-del-fijo="${f.id}" title="Eliminar gasto fijo">✕</button>
-      </div>
-    </div>
-  `).join("");
-  wrap.querySelectorAll("[data-fijo-monto]").forEach((input) => {
-    input.addEventListener("input", debounce((e) => {
-      updateRow(col.gastosFijos, e.target.dataset.fijoMonto, { monto: Number(e.target.value) || 0 });
-    }, 500));
-  });
-  wrap.querySelectorAll("[data-del-fijo]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const f = fijosCache.find((x) => x.id === btn.dataset.delFijo);
-      await deleteRow(col.gastosFijos, btn.dataset.delFijo);
-      if (f) {
-        pushAction(makeDeleteAction(`Eliminar gasto fijo: ${f.nombre}`, col.gastosFijos, f.id, stripId(f)));
-      }
-      toast("Gasto fijo eliminado (no se va a volver a cargar)");
+    `).join("");
+    wrap.querySelectorAll("[data-fijo-monto]").forEach((input) => {
+      input.addEventListener("input", debounce((e) => {
+        updateRow(col.gastosFijos, e.target.dataset.fijoMonto, { monto: Number(e.target.value) || 0 });
+      }, 500));
+    });
+    wrap.querySelectorAll("[data-del-fijo]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const f = fijosCache.find((x) => x.id === btn.dataset.delFijo);
+        await deleteRow(col.gastosFijos, btn.dataset.delFijo);
+        if (f) {
+          pushAction(makeDeleteAction(`Eliminar gasto fijo: ${f.nombre}`, col.gastosFijos, f.id, stripId(f)));
+        }
+        toast("Gasto fijo eliminado (no se va a volver a cargar)");
+      });
     });
   });
 }
