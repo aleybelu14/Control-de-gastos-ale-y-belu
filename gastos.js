@@ -12,6 +12,8 @@ let cuentasData = {};      // nombre -> saldo
 let gastosCache = [];      // todos los gastos del mes (efectivo + tarjeta)
 let fijosCache = [];       // catálogo de gastos fijos (colección aparte)
 let unsubMes = null, unsubCuentas = null, unsubGastos = null, unsubFijos = null;
+let cuentasLoadedOnce = false; // evita reconstruir los inputs de "Distribución de caja" en cada eco
+let fijosPrevCount = null;     // idem para gastos fijos: solo reconstruir si cambia la cantidad
 
 export function getCotizacion() { return cotizacion; }
 export function setCotizacion(v) { cotizacion = v || 1; render(); }
@@ -35,7 +37,9 @@ export function initGastos() {
 
   unsubFijos = watchCollection(query(col.gastosFijos, orderBy("nombre")), (rows) => {
     fijosCache = rows;
-    renderFijos();
+    const structureChanged = fijosPrevCount === null || rows.length !== fijosPrevCount;
+    fijosPrevCount = rows.length;
+    if (structureChanged) renderFijos(); // solo reconstruir si se agregó/borró un fijo
     aplicarFijosDelMes(); // idempotente: solo agrega los que falten
   });
 
@@ -77,6 +81,7 @@ async function switchMonth(mesId) {
 
   cuentasData = {};
   CUENTAS_FIJAS.forEach((c) => (cuentasData[c] = 0));
+  cuentasLoadedOnce = false;
   renderCuentas(); // paint inputs immediately, values fill in as snapshot arrives
 
   const qCuentas = query(col.cuentas, where("mes", "==", mesId));
@@ -84,7 +89,10 @@ async function switchMonth(mesId) {
     cuentasData = {};
     CUENTAS_FIJAS.forEach((c) => (cuentasData[c] = 0));
     rows.forEach((r) => (cuentasData[r.nombre] = r.saldo || 0));
-    renderCuentas();
+    if (!cuentasLoadedOnce) {
+      cuentasLoadedOnce = true;
+      renderCuentas();
+    }
     render();
   });
 

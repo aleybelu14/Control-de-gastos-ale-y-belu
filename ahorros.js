@@ -7,6 +7,7 @@ let currentMonthAh = monthId();
 let plataformas = [];
 let saldos = {}; // plataformaId -> {inicio, fin, movimientos}
 let unsubPlataformas = null, unsubSaldos = null;
+let saldosLoadedOnce = false; // evita reconstruir los inputs en cada eco de Firestore
 
 export function initAhorros() {
   document.getElementById("prevMonthAh").addEventListener("click", () => switchMonth(shiftMonth(currentMonthAh, -1)));
@@ -36,11 +37,21 @@ function switchMonth(mesId) {
   currentMonthAh = mesId;
   document.getElementById("monthLabelAh").textContent = monthLabel(mesId);
   if (unsubSaldos) unsubSaldos();
+  saldosLoadedOnce = false;
   const q = query(col.saldos, where("mes", "==", mesId));
   unsubSaldos = watchCollection(q, (rows) => {
     saldos = {};
     rows.forEach((r) => (saldos[r.plataformaId] = r));
-    renderGrid();
+    if (!saldosLoadedOnce) {
+      // primera carga del mes: acá sí hace falta pintar los inputs con sus valores iniciales
+      saldosLoadedOnce = true;
+      renderGrid();
+    } else {
+      // ecos de nuestros propios guardados: solo actualizar los resultados,
+      // nunca reconstruir los inputs (eso es lo que te cortaba el tipeo)
+      renderResultados();
+      renderTotales();
+    }
   });
 }
 
@@ -88,8 +99,8 @@ function renderGrid() {
           </div>
         </div>
         <div class="ahorro-result">
-          <span>Ganancia: <span class="${cls}">${p.moneda === "USD" ? "US$" : "$"}${ganancia.toLocaleString("es-AR", { maximumFractionDigits: 2 })}</span></span>
-          <span>Rendimiento: <span class="${cls}">${rendimiento.toFixed(2)}%</span></span>
+          <span>Ganancia: <span class="${cls}" id="ganancia-${p.id}">${p.moneda === "USD" ? "US$" : "$"}${ganancia.toLocaleString("es-AR", { maximumFractionDigits: 2 })}</span></span>
+          <span>Rendimiento: <span class="${cls}" id="rendimiento-${p.id}">${rendimiento.toFixed(2)}%</span></span>
         </div>
       </div>
     `;
@@ -98,11 +109,31 @@ function renderGrid() {
   wrap.querySelectorAll("input[data-field]").forEach((input) => {
     input.addEventListener("input", debounce((e) => {
       saveSaldo(e.target.dataset.pid, e.target.dataset.field, e.target.value);
-      renderGrid();
+      renderResultados();
+      renderTotales();
     }, 600));
   });
 
   renderTotales();
+}
+
+function renderResultados() {
+  plataformas.forEach((p) => {
+    const s = saldos[p.id] || { inicio: 0, fin: 0, movimientos: 0 };
+    const ganancia = (s.fin || 0) - (s.inicio || 0) - (s.movimientos || 0);
+    const rendimiento = s.inicio ? (ganancia / s.inicio) * 100 : 0;
+    const cls = ganancia >= 0 ? "positive" : "negative";
+    const gEl = document.getElementById(`ganancia-${p.id}`);
+    const rEl = document.getElementById(`rendimiento-${p.id}`);
+    if (gEl) {
+      gEl.textContent = `${p.moneda === "USD" ? "US$" : "$"}${ganancia.toLocaleString("es-AR", { maximumFractionDigits: 2 })}`;
+      gEl.className = cls;
+    }
+    if (rEl) {
+      rEl.textContent = `${rendimiento.toFixed(2)}%`;
+      rEl.className = cls;
+    }
+  });
 }
 
 function toARS(monto, moneda) {
