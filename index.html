@@ -584,7 +584,7 @@ input, select{ -webkit-appearance: none; appearance: none; }
         <h2 class="card-title" id="panelFijoTitle">Agregar gasto fijo</h2>
         <button class="modal-close" id="panelFijoClose" type="button">✕</button>
       </div>
-      <p class="card-subtitle">Se carga solo cada mes. Si más adelante le subís el monto (ej: inflación), se actualiza ese mes y los que vengan — los anteriores quedan como estaban.</p>
+      <p class="card-subtitle">El nombre/categoría/forma de pago se repiten solos cada mes. El monto arranca en $0 en cada mes nuevo — lo cargás vos, y queda 100% independiente: no afecta a ningún otro mes, ni antes ni después.</p>
       <form id="fijoForm" class="fijo-form">
         <div class="field-row">
           <label>Nombre</label>
@@ -1580,29 +1580,47 @@ function gastoRow(g) {
 }
 
 // ---- Gastos fijos (catálogo) ---------------------------------------------
+// El catálogo solo guarda nombre/categoría/forma de pago/entidad — el monto
+// NO se guarda ahí como "default" para otros meses. El mes en el que se
+// crea el fijo arranca con el monto que se tipeó acá; cualquier otro mes
+// (pasado o futuro) arranca en $0 hasta que se cargue a mano en ESE mes.
 async function onAddFijo(e) {
   e.preventDefault();
+  const montoInicial = Number(document.getElementById("f-monto").value) || 0;
   const data = {
     nombre: document.getElementById("f-nombre").value.trim(),
-    monto: Number(document.getElementById("f-monto").value) || 0,
     moneda: document.getElementById("f-moneda").value,
     categoria: document.getElementById("f-categoria").value,
     formaPago: document.getElementById("f-formaPago").value,
     entidad: document.getElementById("f-entidad").value.trim(),
     activo: true
   };
-  if (!data.nombre || !data.monto) { toast("Completá nombre y monto"); return; }
+  if (!data.nombre || !montoInicial) { toast("Completá nombre y monto"); return; }
   const ref = await addRow(col.gastosFijos, data);
   pushAction(makeAddAction(`Agregar gasto fijo: ${data.nombre}`, col.gastosFijos, data, ref.id));
+  // crea de una la instancia de ESTE mes con el monto tipeado (los demás
+  // meses van a arrancar en $0 vía aplicarFijosDelMes)
+  await upsertDoc(col.gastos, `${currentMonth}__fijo__${ref.id}`, {
+    mes: currentMonth,
+    fecha: `${currentMonth}-01`,
+    monto: montoInicial,
+    moneda: data.moneda,
+    categoria: data.categoria,
+    detalle: data.nombre,
+    formaPago: data.formaPago,
+    entidad: data.entidad,
+    esFijo: true,
+    fijoId: ref.id
+  });
   e.target.reset();
   document.getElementById("panelFijo").hidden = true;
-  toast("Gasto fijo agregado — se va a cargar solo cada mes");
+  toast("Gasto fijo agregado — en los demás meses vas a tener que cargar el monto a mano");
 }
 
 // Las dos cards de fijos (efectivo y tarjeta) muestran la instancia REAL de
-// este mes (un doc en "gastos" con esFijo:true), no el catálogo — así
-// editar el monto acá afecta este mes y, al pisar también el catálogo,
-// todos los que vengan, sin tocar los ya pasados.
+// este mes (un doc en "gastos" con esFijo:true), no el catálogo. Cada mes es
+// 100% independiente: editar el monto acá solo toca el gasto de ESTE mes,
+// nunca ningún otro (ni antes ni después).
 function renderFijoRow(g) {
   return `
     <div class="list-row ok">
@@ -1612,7 +1630,7 @@ function renderFijoRow(g) {
       </div>
       <div class="list-row-actions">
         <span style="font-size:12px;color:var(--ink-faint);">${g.moneda === "USD" ? "US$" : "$"}</span>
-        <input type="number" class="fijo-monto-input" step="0.01" data-fijo-gasto="${g.id}" data-fijo-cat="${g.fijoId || ""}" value="${g.monto || 0}">
+        <input type="number" class="fijo-monto-input" step="0.01" data-fijo-gasto="${g.id}" value="${g.monto || 0}">
         <button class="btn-icon-sm" data-eliminar-fijo="${g.id}" data-fijo-id="${g.fijoId || ""}" title="Eliminar este gasto fijo (no se vuelve a cargar en ningún mes)">✕</button>
       </div>
     </div>
@@ -1622,13 +1640,8 @@ function renderFijoRow(g) {
 function wireFijoRowEvents(wrap) {
   wrap.querySelectorAll("[data-fijo-gasto]").forEach((input) => {
     input.addEventListener("input", debounce((e) => {
-      const nuevoMonto = Number(e.target.value) || 0;
-      updateRow(col.gastos, e.target.dataset.fijoGasto, { monto: nuevoMonto });
-      // también actualiza el catálogo para que los meses siguientes ya
-      // arranquen con el nuevo valor (ajuste por inflación, etc.)
-      if (e.target.dataset.fijoCat) {
-        updateRow(col.gastosFijos, e.target.dataset.fijoCat, { monto: nuevoMonto });
-      }
+      // solo actualiza el gasto de ESTE mes — nunca el catálogo ni otros meses
+      updateRow(col.gastos, e.target.dataset.fijoGasto, { monto: Number(e.target.value) || 0 });
     }, 600));
   });
   // Un solo botón: borra el gasto fijo del todo (catálogo + la instancia de
@@ -1657,10 +1670,10 @@ function wireFijoRowEvents(wrap) {
 // sea — siempre termina pisando el MISMO documento, nunca crea uno nuevo.
 // Un gasto fijo solo deja de aplicarse si se borra del catálogo (botón ✕).
 //
-// Compatibilidad con meses cargados antes de este cambio: esos gastos fijos
-// quedaron con un ID al azar (no el determinístico de ahora). Antes de crear
-// nada, se chequea si el fijo YA tiene un gasto ese mes (con cualquier ID) —
-// si ya existe, no se crea uno nuevo con el ID determinístico al lado.
+// IMPORTANTE: acá SIEMPRE se crea con monto $0, nunca copiando el catálogo
+// ni el valor de otro mes — cada mes es independiente y hay que cargarle el
+// monto a mano. Si el fijo se creó este mes, esta función no toca nada
+// (onAddFijo ya escribió la instancia del mes con el monto tipeado).
 const mesesAplicandoFijos = new Set();
 async function aplicarFijosDelMes() {
   const mes = currentMonth;
@@ -1683,7 +1696,7 @@ async function aplicarFijosDelMes() {
       await upsertDoc(col.gastos, gastoId, {
         mes,
         fecha: `${mes}-01`,
-        monto: f.monto || 0,
+        monto: 0,
         moneda: f.moneda || "ARS",
         categoria: f.categoria || "Otro",
         detalle: f.nombre,
