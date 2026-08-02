@@ -332,6 +332,11 @@ input, select{ -webkit-appearance: none; appearance: none; }
 }
 
 /* Inventory item card */
+.estado-select{
+  border: 1px solid var(--line); background: var(--surface-sunken);
+  border-radius: var(--radius-sm); padding: 6px 8px; font-size: 12px; font-weight: 700; color: var(--ink);
+  flex-shrink: 0;
+}
 .inv-row{ display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--green); border-radius: var(--radius-sm); flex-wrap: wrap; }
 .inv-row.low-stock{ border-left-color: var(--amber); background: var(--amber-soft); }
 .inv-row.out-stock{ border-left-color: var(--red); background: var(--red-soft); }

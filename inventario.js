@@ -1,18 +1,27 @@
 import { col, query, orderBy, watchCollection, addRow, updateRow, deleteRow } from "./db.js";
 import {
-  CATEGORIAS_INVENTARIO, fmtARS, fmtDate, daysBetween, todayISO, toast, notifyUpdate
+  CATEGORIAS_INVENTARIO, ESTADOS_INVENTARIO, fmtARS, fmtDate, daysBetween, todayISO, toast, notifyUpdate
 } from "./utils.js";
 import { pushAction, makeAddAction, makeDeleteAction, makeUpdateAction, stripId } from "./history.js";
 
 let itemsCache = [];
 let unsub = null;
 let categoriaFiltro = null; // null = todas
+let estadoFiltro = null;    // null = todos
+let searchTerm = "";
 
 export function initInventario() {
   fillSelect("i-categoria", CATEGORIAS_INVENTARIO);
   fillSelect("e-categoria", CATEGORIAS_INVENTARIO);
+  fillEstadoSelect("i-estado");
+  fillEstadoSelect("e-estado");
+  document.getElementById("i-estado").value = "en_uso";
 
   document.getElementById("itemForm").addEventListener("submit", onAddItem);
+  document.getElementById("inventarioSearch").addEventListener("input", (e) => {
+    searchTerm = e.target.value.trim().toLowerCase();
+    renderInventario();
+  });
 
   // ---- Modal: editar artículo ----
   const editModal = document.getElementById("editModal");
@@ -39,6 +48,13 @@ function fillSelect(id, options) {
   const sel = document.getElementById(id);
   sel.innerHTML = options.map((o) => `<option value="${o}">${o}</option>`).join("");
 }
+function fillEstadoSelect(id) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = ESTADOS_INVENTARIO.map((e) => `<option value="${e.key}">${e.label}</option>`).join("");
+}
+function estadoInfo(key) {
+  return ESTADOS_INVENTARIO.find((e) => e.key === key) || ESTADOS_INVENTARIO[1];
+}
 
 function openModal(modal) { modal.hidden = false; }
 function closeModal(modal) { modal.hidden = true; }
@@ -50,6 +66,7 @@ async function onAddItem(e) {
   const data = {
     nombre: document.getElementById("i-nombre").value.trim(),
     categoria: document.getElementById("i-categoria").value,
+    estado: document.getElementById("i-estado").value || "en_uso",
     precio: Number(document.getElementById("i-precio").value) || 0,
     capacidad: document.getElementById("i-capacidad").value.trim(),
     fechaAdquisicion: fecha,
@@ -65,6 +82,7 @@ async function onAddItem(e) {
   pushAction(makeAddAction(`Agregar artículo: ${data.nombre}`, col.inventario, data, ref.id));
   e.target.reset();
   document.getElementById("i-cantidad").value = 1;
+  document.getElementById("i-estado").value = "en_uso";
   toast("Artículo agregado");
 }
 
@@ -112,11 +130,20 @@ async function onDelete(id) {
   toast("Artículo eliminado");
 }
 
+// ---- Cambiar estado (En stock / En uso / A reponer) ----------------------
+async function onChangeEstado(item, nuevoEstado) {
+  const before = { estado: item.estado || "en_uso" };
+  const after = { estado: nuevoEstado };
+  await updateRow(col.inventario, item.id, after);
+  pushAction(makeUpdateAction(`Cambiar estado: ${item.nombre} → ${estadoInfo(nuevoEstado).label}`, col.inventario, item.id, before, after));
+}
+
 // ---- Editar artículo (sin borrar/recargar todo) -------------------------
 function onOpenEdit(item) {
   document.getElementById("e-id").value = item.id;
   document.getElementById("e-nombre").value = item.nombre || "";
   document.getElementById("e-categoria").value = item.categoria || CATEGORIAS_INVENTARIO[0];
+  document.getElementById("e-estado").value = item.estado || "en_uso";
   document.getElementById("e-precio").value = item.precio || "";
   document.getElementById("e-capacidad").value = item.capacidad || "";
   document.getElementById("e-fecha").value = item.fechaAdquisicion || "";
@@ -131,6 +158,7 @@ async function onSubmitEdit(e) {
   const data = {
     nombre: document.getElementById("e-nombre").value.trim(),
     categoria: document.getElementById("e-categoria").value,
+    estado: document.getElementById("e-estado").value,
     precio: Number(document.getElementById("e-precio").value) || 0,
     capacidad: document.getElementById("e-capacidad").value.trim(),
     fechaAdquisicion: document.getElementById("e-fecha").value || "",
@@ -142,6 +170,7 @@ async function onSubmitEdit(e) {
     const before = {
       nombre: item.nombre || "",
       categoria: item.categoria || "",
+      estado: item.estado || "en_uso",
       precio: item.precio || 0,
       capacidad: item.capacidad || "",
       fechaAdquisicion: item.fechaAdquisicion || "",
@@ -178,6 +207,7 @@ async function onSubmitAddStock(e) {
   const before = {
     cantidad: item.cantidad || 0,
     precio: item.precio || 0,
+    estado: item.estado || "en_uso",
     fechaAdquisicion: item.fechaAdquisicion || "",
     fechaUltimaReposicion: item.fechaUltimaReposicion || "",
     historialCompras: item.historialCompras || []
@@ -185,6 +215,7 @@ async function onSubmitAddStock(e) {
   const after = {
     cantidad: (item.cantidad || 0) + cantidadAgregar,
     precio: precio || item.precio || 0,
+    estado: "en_uso", // al reponerlo, vuelve a estar en uso
     fechaAdquisicion: fecha,
     fechaUltimaReposicion: fecha,
     historialCompras
@@ -198,7 +229,6 @@ async function onSubmitAddStock(e) {
 // ---- Render ---------------------------------------------------------------
 function renderAll() {
   renderChips();
-  renderListaCompras();
   renderInventario();
   renderRecambio();
   renderDuracion();
@@ -210,62 +240,64 @@ export function getListaComprasCount() {
 }
 
 function renderChips() {
-  const wrap = document.getElementById("categoriaChips");
+  const catWrap = document.getElementById("categoriaChips");
   const categoriasUsadas = CATEGORIAS_INVENTARIO.filter((c) => itemsCache.some((i) => (i.categoria || "Otro") === c));
-  const chips = ["Todas", ...categoriasUsadas];
-  wrap.innerHTML = chips.map((c) => {
+  const catChips = ["Todas", ...categoriasUsadas];
+  catWrap.innerHTML = catChips.map((c) => {
     const active = (c === "Todas" && !categoriaFiltro) || c === categoriaFiltro;
     return `<button type="button" class="chip ${active ? "active" : ""}" data-chip="${c}">${c}</button>`;
   }).join("");
-  wrap.querySelectorAll("[data-chip]").forEach((btn) => {
+  catWrap.querySelectorAll("[data-chip]").forEach((btn) => {
     btn.addEventListener("click", () => {
       categoriaFiltro = btn.dataset.chip === "Todas" ? null : btn.dataset.chip;
       renderAll();
     });
   });
-}
 
-function renderListaCompras() {
-  const wrap = document.getElementById("listaCompras");
-  const enLista = itemsCache.filter((i) => (i.cantidad || 0) <= 1);
-  if (!enLista.length) {
-    wrap.innerHTML = `<div class="empty-state">Nada por reponer por ahora.</div>`;
-  } else {
-    wrap.innerHTML = enLista.map((i) => `
-      <div class="list-row">
-        <div class="list-row-main">
-          <div class="list-row-title"><span class="tag red">${(i.cantidad || 0) === 0 ? "Sin stock" : "Último"}</span>${i.nombre}</div>
-          <div class="list-row-meta">${i.categoria || ""} ${i.capacidad ? "· " + i.capacidad : ""}</div>
-        </div>
-        <span class="list-row-amount">${fmtARS(i.precio)}</span>
-      </div>
-    `).join("");
-  }
-  const costo = enLista.reduce((s, i) => s + (i.precio || 0), 0);
-  document.getElementById("out-costoReposicion").textContent = fmtARS(costo);
+  const estWrap = document.getElementById("estadoChips");
+  const estChips = [{ key: null, label: "Todos los estados" }, ...ESTADOS_INVENTARIO.map((e) => ({ key: e.key, label: e.label }))];
+  estWrap.innerHTML = estChips.map((e) => {
+    const active = e.key === estadoFiltro;
+    return `<button type="button" class="chip ${active ? "active" : ""}" data-estchip="${e.key ?? ""}">${e.label}</button>`;
+  }).join("");
+  estWrap.querySelectorAll("[data-estchip]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      estadoFiltro = btn.dataset.estchip === "" ? null : btn.dataset.estchip;
+      renderAll();
+    });
+  });
 }
 
 function renderInventario() {
   const wrap = document.getElementById("inventarioList");
-  const lista = categoriaFiltro ? itemsCache.filter((i) => (i.categoria || "Otro") === categoriaFiltro) : itemsCache;
+  let lista = itemsCache;
+  if (categoriaFiltro) lista = lista.filter((i) => (i.categoria || "Otro") === categoriaFiltro);
+  if (estadoFiltro) lista = lista.filter((i) => (i.estado || "en_uso") === estadoFiltro);
+  if (searchTerm) lista = lista.filter((i) => (i.nombre || "").toLowerCase().includes(searchTerm) || (i.categoria || "").toLowerCase().includes(searchTerm));
+
   if (!lista.length) {
-    wrap.innerHTML = `<div class="empty-state">Todavía no cargaste artículos.</div>`;
+    wrap.innerHTML = `<div class="empty-state">${searchTerm || categoriaFiltro || estadoFiltro ? "Nada que coincida con el filtro." : "Todavía no cargaste artículos."}</div>`;
     return;
   }
   wrap.innerHTML = lista.map((i) => {
     const cant = i.cantidad ?? 0;
-    const estado = cant === 0 ? "out-stock" : cant === 1 ? "low-stock" : "";
+    const stockClase = cant === 0 ? "out-stock" : cant === 1 ? "low-stock" : ""; // verde (2+) / amarillo (1) / rojo (0)
+    const est = estadoInfo(i.estado || "en_uso");
     return `
-    <div class="inv-row ${estado}">
+    <div class="inv-row ${stockClase}">
       <button class="btn-minus" data-minus="${i.id}" title="Descontar 1" ${cant <= 0 ? "disabled" : ""}>−1</button>
       <button class="btn-plus" data-add="${i.id}" title="Agregar (registrar compra)">+</button>
       <div class="inv-row-info">
         <div class="inv-row-name">${i.nombre}</div>
         <div class="inv-row-meta">
-          ${i.categoria ? `<span class="tag">${i.categoria}</span>` : ""}${i.capacidad || ""} ${i.precio ? "· " + fmtARS(i.precio) : ""}
+          ${i.categoria ? `<span class="tag">${i.categoria}</span>` : ""}<span class="tag ${est.tagClass}">${est.label}</span>
+          ${i.capacidad || ""} ${i.precio ? "· " + fmtARS(i.precio) : ""}
           ${i.fechaAdquisicion ? "· desde " + fmtDate(i.fechaAdquisicion) : ""}
         </div>
       </div>
+      <select class="estado-select" data-estado-sel="${i.id}">
+        ${ESTADOS_INVENTARIO.map((e) => `<option value="${e.key}" ${e.key === (i.estado || "en_uso") ? "selected" : ""}>${e.label}</option>`).join("")}
+      </select>
       <div class="inv-qty">${cant}</div>
       <div class="inv-actions">
         <button class="btn-icon-sm edit" data-edit="${i.id}" title="Editar">✎</button>
@@ -284,6 +316,12 @@ function renderInventario() {
     btn.addEventListener("click", () => {
       const item = itemsCache.find((i) => i.id === btn.dataset.add);
       if (item) onOpenAddStock(item);
+    });
+  });
+  wrap.querySelectorAll("[data-estado-sel]").forEach((sel) => {
+    sel.addEventListener("change", () => {
+      const item = itemsCache.find((i) => i.id === sel.dataset.estadoSel);
+      if (item) onChangeEstado(item, sel.value);
     });
   });
   wrap.querySelectorAll("[data-edit]").forEach((btn) => {

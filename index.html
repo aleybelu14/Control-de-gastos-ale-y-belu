@@ -141,7 +141,7 @@
       <div class="card-title-row">
         <h2 class="card-title">Gastos fijos del mes</h2>
       </div>
-      <p class="card-subtitle">Se definen una vez y se cargan solos cada mes — no hace falta tipearlos de nuevo.</p>
+      <p class="card-subtitle">Se cargan solos cada mes. Si editás el monto acá (ej: subió por inflación), se actualiza este mes y todos los que vengan — los meses anteriores quedan como estaban.</p>
       <form id="fijoForm" class="fijo-form">
         <div class="field-row">
           <label>Nombre</label>
@@ -173,6 +173,14 @@
         <button type="submit" class="btn-primary">Agregar gasto fijo</button>
       </form>
       <div id="fijosList" class="fijos-list" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title-row">
+        <h2 class="card-title">Gastos fijos en tarjeta de crédito</h2>
+      </div>
+      <p class="card-subtitle">Suscripciones o gastos fijos que se pagan con tarjeta (ej: Netflix, Spotify) — se cargan solos cada mes en el resumen de tarjeta. Editar el monto acá también actualiza los meses siguientes, sin tocar los anteriores.</p>
+      <div id="fijosTarjetaList" class="fijos-list"></div>
     </div>
 
     <div class="card">
@@ -215,6 +223,9 @@
 
     <div class="card">
       <h2 class="card-title">Gastos del mes (efectivo / débito / transferencia)</h2>
+      <div class="actions-row">
+        <input type="text" id="gastosSearch" class="search-input" placeholder="Buscar por detalle, categoría o entidad...">
+      </div>
       <div id="gastosList" class="gastos-list"></div>
     </div>
 
@@ -261,6 +272,10 @@
           <select id="i-categoria"></select>
         </div>
         <div class="field-row">
+          <label>Estado</label>
+          <select id="i-estado"></select>
+        </div>
+        <div class="field-row">
           <label>Precio</label>
           <input type="number" id="i-precio" step="0.01" inputmode="decimal">
         </div>
@@ -280,20 +295,14 @@
       </form>
     </div>
 
-    <div class="card" id="listaComprasCard">
-      <h2 class="card-title">Lista de compras automática</h2>
-      <p class="card-subtitle">Artículos con stock 1 o 0 (por reponer)</p>
-      <div id="listaCompras" class="lista-compras"></div>
-      <div class="field-row total-row">
-        <label>Costo estimado de reposición</label>
-        <output id="out-costoReposicion">$0</output>
-      </div>
-    </div>
-
     <div class="card">
       <div class="card-title-row">
         <h2 class="card-title">Todos los artículos</h2>
       </div>
+      <div class="actions-row">
+        <input type="text" id="inventarioSearch" class="search-input" placeholder="Buscar artículo...">
+      </div>
+      <div class="chips-row" id="estadoChips"></div>
       <div class="chips-row" id="categoriaChips"></div>
       <div id="inventarioList" class="inventario-list"></div>
     </div>
@@ -379,6 +388,10 @@
         <select id="e-categoria"></select>
       </div>
       <div class="field-row">
+        <label>Estado</label>
+        <select id="e-estado"></select>
+      </div>
+      <div class="field-row">
         <label>Precio</label>
         <input type="number" id="e-precio" step="0.01" inputmode="decimal">
       </div>
@@ -436,6 +449,54 @@
 </div>
 
 <div id="toast" class="toast" hidden></div>
+
+<!-- ===================== MODAL: editar gasto ===================== -->
+<div class="modal-backdrop" id="editGastoModal" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Editar gasto</h2>
+      <button class="modal-close" id="editGastoModalClose" type="button">✕</button>
+    </div>
+    <form id="editGastoForm">
+      <input type="hidden" id="eg-id">
+      <div class="field-row">
+        <label>Fecha</label>
+        <input type="date" id="eg-fecha" required>
+      </div>
+      <div class="field-row">
+        <label>Monto</label>
+        <input type="number" id="eg-monto" step="0.01" inputmode="decimal" required>
+      </div>
+      <div class="field-row">
+        <label>Moneda</label>
+        <select id="eg-moneda">
+          <option value="ARS">ARS</option>
+          <option value="USD">USD</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <label>Categoría</label>
+        <select id="eg-categoria"></select>
+      </div>
+      <div class="field-row">
+        <label>Detalle</label>
+        <input type="text" id="eg-detalle">
+      </div>
+      <div class="field-row">
+        <label>Forma de pago</label>
+        <select id="eg-formaPago"></select>
+      </div>
+      <div class="field-row">
+        <label>Entidad</label>
+        <input type="text" id="eg-entidad">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-outline" id="editGastoModalCancel">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar cambios</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <script type="module" src="main.js"></script>
 </body>

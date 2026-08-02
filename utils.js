@@ -21,6 +21,15 @@ export const CATEGORIAS_INVENTARIO = [
   "Lavadero", "Herramientas", "Mascotas", "Otro"
 ];
 
+// Estado de uso de un artículo (para cosas que se compran de a una — aceite,
+// condimentos, detergente — y van pasando de "guardado" a "en uso" a
+// "hay que comprar más" sin depender solo del número de cantidad).
+export const ESTADOS_INVENTARIO = [
+  { key: "stock", label: "En stock", tagClass: "" },
+  { key: "en_uso", label: "En uso", tagClass: "green" },
+  { key: "reponer", label: "A reponer", tagClass: "red" }
+];
+
 export const MESES_LARGO = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"

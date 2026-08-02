@@ -3,17 +3,17 @@ import {
   CATEGORIAS, FORMAS_PAGO, CUENTAS_FIJAS, slug, monthId, shiftMonth, monthLabel,
   fmtARS, fmtUSD, debounce, toast, notifyUpdate, rerenderPreservingFocus
 } from "./utils.js";
-import { pushAction, makeAddAction, makeDeleteAction, stripId } from "./history.js";
+import { pushAction, makeAddAction, makeDeleteAction, makeUpdateAction, stripId } from "./history.js";
 
 let currentMonth = monthId();
 let cotizacion = 1000;
 let mesData = {};
 let cuentasData = {};      // nombre -> saldo
-let gastosCache = [];      // todos los gastos del mes (efectivo + tarjeta)
-let fijosCache = [];       // catálogo de gastos fijos (colección aparte)
+let gastosCache = [];      // todos los gastos del mes (efectivo + tarjeta, incluye fijos aplicados)
+let fijosCache = [];       // catálogo de gastos fijos (colección aparte, sin mes)
+let gastosSearchTerm = "";
 let unsubMes = null, unsubCuentas = null, unsubGastos = null, unsubFijos = null;
 let cuentasLoadedOnce = false; // evita reconstruir los inputs de "Distribución de caja" en cada eco
-let fijosPrevCount = null;     // idem para gastos fijos: solo reconstruir si cambia la cantidad
 
 export function getCotizacion() { return cotizacion; }
 export function setCotizacion(v) { cotizacion = v || 1; render(); }
@@ -21,8 +21,10 @@ export function setCotizacion(v) { cotizacion = v || 1; render(); }
 export function initGastos() {
   fillSelect("g-categoria", CATEGORIAS);
   fillSelect("g-formaPago", FORMAS_PAGO);
+  fillSelect("eg-categoria", CATEGORIAS);
+  fillSelect("eg-formaPago", FORMAS_PAGO);
   fillSelect("f-categoria", CATEGORIAS);
-  fillSelect("f-formaPago", FORMAS_PAGO.filter((f) => f !== "CRED"));
+  fillSelect("f-formaPago", FORMAS_PAGO); // incluye CRED: para suscripciones fijas en tarjeta
   document.getElementById("g-fecha").value = new Date().toISOString().slice(0, 10);
 
   document.getElementById("prevMonth").addEventListener("click", () => switchMonth(shiftMonth(currentMonth, -1)));
@@ -35,12 +37,24 @@ export function initGastos() {
   document.getElementById("gastoForm").addEventListener("submit", onAddGasto);
   document.getElementById("fijoForm").addEventListener("submit", onAddFijo);
 
+  document.getElementById("gastosSearch").addEventListener("input", (e) => {
+    gastosSearchTerm = e.target.value.trim().toLowerCase();
+    renderGastos();
+  });
+
+  // ---- Modal: editar gasto ----
+  const editGastoModal = document.getElementById("editGastoModal");
+  document.getElementById("editGastoForm").addEventListener("submit", onSubmitEditGasto);
+  document.getElementById("editGastoModalClose").addEventListener("click", () => (editGastoModal.hidden = true));
+  document.getElementById("editGastoModalCancel").addEventListener("click", () => (editGastoModal.hidden = true));
+  editGastoModal.addEventListener("click", (e) => { if (e.target === editGastoModal) editGastoModal.hidden = true; });
+
+  // Catálogo de gastos fijos: solo se usa para saber qué aplicar cada mes y
+  // como referencia para "dejar de repetir". No dispara ningún render de
+  // listas (esas se arman en base a los gastos reales del mes, más abajo).
   unsubFijos = watchCollection(query(col.gastosFijos, orderBy("nombre")), (rows) => {
     fijosCache = rows;
-    const structureChanged = fijosPrevCount === null || rows.length !== fijosPrevCount;
-    fijosPrevCount = rows.length;
-    if (structureChanged) renderFijos(); // solo reconstruir si se agregó/borró un fijo
-    aplicarFijosDelMes(); // idempotente: solo agrega los que falten
+    aplicarFijosDelMes();
   });
 
   switchMonth(currentMonth);
@@ -101,6 +115,8 @@ async function switchMonth(mesId) {
     gastosCache = rows.slice().sort((a, b) => (b.fecha || "").localeCompare(a.fecha || ""));
     renderGastos();
     renderTarjeta();
+    renderFijosDelMes();
+    renderFijosTarjeta();
     render();
   });
 }
@@ -184,27 +200,75 @@ async function onDeleteGasto(id) {
   toast("Gasto eliminado");
 }
 
+function onOpenEditGasto(g) {
+  document.getElementById("eg-id").value = g.id;
+  document.getElementById("eg-fecha").value = g.fecha || "";
+  document.getElementById("eg-monto").value = g.monto || 0;
+  document.getElementById("eg-moneda").value = g.moneda || "ARS";
+  document.getElementById("eg-categoria").value = g.categoria || CATEGORIAS[0];
+  document.getElementById("eg-detalle").value = g.detalle || "";
+  document.getElementById("eg-formaPago").value = g.formaPago || FORMAS_PAGO[0];
+  document.getElementById("eg-entidad").value = g.entidad || "";
+  document.getElementById("editGastoModal").hidden = false;
+}
+
+async function onSubmitEditGasto(e) {
+  e.preventDefault();
+  const id = document.getElementById("eg-id").value;
+  const g = gastosCache.find((x) => x.id === id);
+  const data = {
+    fecha: document.getElementById("eg-fecha").value,
+    monto: Number(document.getElementById("eg-monto").value) || 0,
+    moneda: document.getElementById("eg-moneda").value,
+    categoria: document.getElementById("eg-categoria").value,
+    detalle: document.getElementById("eg-detalle").value.trim(),
+    formaPago: document.getElementById("eg-formaPago").value,
+    entidad: document.getElementById("eg-entidad").value.trim()
+  };
+  await updateRow(col.gastos, id, data);
+  if (g) {
+    const before = {
+      fecha: g.fecha || "", monto: g.monto || 0, moneda: g.moneda || "ARS",
+      categoria: g.categoria || "", detalle: g.detalle || "", formaPago: g.formaPago || "", entidad: g.entidad || ""
+    };
+    pushAction(makeUpdateAction(`Editar gasto: ${data.detalle || data.categoria}`, col.gastos, id, before, data));
+  }
+  document.getElementById("editGastoModal").hidden = true;
+  toast("Gasto actualizado");
+}
+
 function esTarjeta(g) { return g.formaPago === "CRED"; }
+function matchesSearch(g, term) {
+  if (!term) return true;
+  return [g.detalle, g.categoria, g.entidad, g.formaPago].some((v) => (v || "").toLowerCase().includes(term));
+}
 
 function renderGastos() {
   const wrap = document.getElementById("gastosList");
-  const lista = gastosCache.filter((g) => !esTarjeta(g));
+  const lista = gastosCache.filter((g) => !esTarjeta(g) && !g.esFijo && matchesSearch(g, gastosSearchTerm));
   if (!lista.length) {
-    wrap.innerHTML = `<div class="empty-state">Todavía no cargaste gastos este mes.</div>`;
+    wrap.innerHTML = `<div class="empty-state">${gastosSearchTerm ? "No hay gastos que coincidan con la búsqueda." : "Todavía no cargaste gastos este mes."}</div>`;
     return;
   }
   wrap.innerHTML = lista.map((g) => `
     <div class="list-row">
       <div class="list-row-main">
-        <div class="list-row-title"><span class="tag">${g.categoria || "Sin categoría"}</span>${g.detalle || "—"}${g.esFijo ? ' <span class="tag green">Fijo</span>' : ""}</div>
+        <div class="list-row-title"><span class="tag">${g.categoria || "Sin categoría"}</span>${g.detalle || "—"}</div>
         <div class="list-row-meta">${g.fecha || ""} · ${g.formaPago || ""} ${g.entidad ? "· " + g.entidad : ""}</div>
       </div>
       <div class="list-row-actions">
         <span class="list-row-amount ${g.moneda === "USD" ? "usd" : ""}">${g.moneda === "USD" ? fmtUSD(g.monto) : fmtARS(g.monto)}</span>
+        <button class="btn-icon-sm edit" data-editg="${g.id}" title="Editar">✎</button>
         <button class="btn-icon-sm" data-del="${g.id}" title="Eliminar">✕</button>
       </div>
     </div>
   `).join("");
+  wrap.querySelectorAll("[data-editg]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const g = gastosCache.find((x) => x.id === btn.dataset.editg);
+      if (g) onOpenEditGasto(g);
+    });
+  });
   wrap.querySelectorAll("[data-del]").forEach((btn) => {
     btn.addEventListener("click", () => onDeleteGasto(btn.dataset.del));
   });
@@ -212,10 +276,11 @@ function renderGastos() {
 
 function renderTarjeta() {
   const wrap = document.getElementById("tarjetaList");
-  const lista = gastosCache.filter(esTarjeta);
-  document.getElementById("tag-cantidadTarjeta").textContent = `${lista.length} gasto${lista.length === 1 ? "" : "s"}`;
+  const lista = gastosCache.filter((g) => esTarjeta(g) && !g.esFijo);
+  const totalLista = gastosCache.filter(esTarjeta);
+  document.getElementById("tag-cantidadTarjeta").textContent = `${totalLista.length} gasto${totalLista.length === 1 ? "" : "s"}`;
   if (!lista.length) {
-    wrap.innerHTML = `<div class="empty-state">Sin gastos con tarjeta este mes.</div>`;
+    wrap.innerHTML = `<div class="empty-state">Sin gastos sueltos con tarjeta este mes (los fijos están en la card de arriba).</div>`;
   } else {
     wrap.innerHTML = lista.map((g) => `
       <div class="list-row warn">
@@ -225,19 +290,26 @@ function renderTarjeta() {
         </div>
         <div class="list-row-actions">
           <span class="list-row-amount ${g.moneda === "USD" ? "usd" : ""}">${g.moneda === "USD" ? fmtUSD(g.monto) : fmtARS(g.monto)}</span>
+          <button class="btn-icon-sm edit" data-editg="${g.id}" title="Editar">✎</button>
           <button class="btn-icon-sm" data-del="${g.id}" title="Eliminar">✕</button>
         </div>
       </div>
     `).join("");
+    wrap.querySelectorAll("[data-editg]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const g = gastosCache.find((x) => x.id === btn.dataset.editg);
+        if (g) onOpenEditGasto(g);
+      });
+    });
     wrap.querySelectorAll("[data-del]").forEach((btn) => {
       btn.addEventListener("click", () => onDeleteGasto(btn.dataset.del));
     });
   }
-  const total = lista.reduce((s, g) => s + (g.moneda === "USD" ? (g.monto || 0) * cotizacion : (g.monto || 0)), 0);
+  const total = totalLista.reduce((s, g) => s + (g.moneda === "USD" ? (g.monto || 0) * cotizacion : (g.monto || 0)), 0);
   document.getElementById("out-totalTarjeta").textContent = fmtARS(total);
 }
 
-// ---- Gastos fijos --------------------------------------------------------
+// ---- Gastos fijos (catálogo) ---------------------------------------------
 async function onAddFijo(e) {
   e.preventDefault();
   const data = {
@@ -256,46 +328,89 @@ async function onAddFijo(e) {
   toast("Gasto fijo agregado — se va a cargar solo cada mes");
 }
 
-function renderFijos() {
-  const wrap = document.getElementById("fijosList");
-  if (!fijosCache.length) {
-    wrap.innerHTML = `<div class="empty-state">Todavía no cargaste gastos fijos.</div>`;
-    return;
-  }
-  rerenderPreservingFocus(wrap, () => {
-    wrap.innerHTML = fijosCache.map((f) => `
-      <div class="list-row ok">
-        <div class="list-row-main">
-          <div class="list-row-title"><span class="tag">${f.categoria || "Sin categoría"}</span>${f.nombre}</div>
-          <div class="list-row-meta">${f.formaPago || ""} ${f.entidad ? "· " + f.entidad : ""} · se aplica todos los meses</div>
-        </div>
-        <div class="list-row-actions">
-          <input type="number" class="fijo-monto-input" step="0.01" data-fijo-monto="${f.id}" value="${f.monto || 0}">
-          <button class="btn-icon-sm" data-del-fijo="${f.id}" title="Eliminar gasto fijo">✕</button>
-        </div>
+// Las dos cards de fijos (efectivo y tarjeta) muestran la instancia REAL de
+// este mes (un doc en "gastos" con esFijo:true), no el catálogo — así
+// editar el monto acá afecta este mes y, al pisar también el catálogo,
+// todos los que vengan, sin tocar los ya pasados.
+function renderFijoRow(g) {
+  const fijo = fijosCache.find((f) => f.id === g.fijoId);
+  return `
+    <div class="list-row ok">
+      <div class="list-row-main">
+        <div class="list-row-title"><span class="tag">${g.categoria || "Sin categoría"}</span>${g.detalle || fijo?.nombre || "—"}</div>
+        <div class="list-row-meta">${g.formaPago || ""} ${g.entidad ? "· " + g.entidad : ""} · se aplica todos los meses</div>
       </div>
-    `).join("");
-    wrap.querySelectorAll("[data-fijo-monto]").forEach((input) => {
-      input.addEventListener("input", debounce((e) => {
-        updateRow(col.gastosFijos, e.target.dataset.fijoMonto, { monto: Number(e.target.value) || 0 });
-      }, 500));
+      <div class="list-row-actions">
+        <span style="font-size:12px;color:var(--ink-faint);">${g.moneda === "USD" ? "US$" : "$"}</span>
+        <input type="number" class="fijo-monto-input" step="0.01" data-fijo-gasto="${g.id}" data-fijo-cat="${g.fijoId || ""}" value="${g.monto || 0}">
+        <button class="btn-icon-sm" data-quitar-mes="${g.id}" title="Quitar solo este mes">✕</button>
+      </div>
+    </div>
+    ${fijo ? `<div style="text-align:right;margin:-6px 0 8px;"><button type="button" class="btn-outline small" data-dejar-repetir="${fijo.id}" data-nombre="${fijo.nombre}">Dejar de repetir este gasto</button></div>` : ""}
+  `;
+}
+
+function wireFijoRowEvents(wrap) {
+  wrap.querySelectorAll("[data-fijo-gasto]").forEach((input) => {
+    input.addEventListener("input", debounce((e) => {
+      const nuevoMonto = Number(e.target.value) || 0;
+      updateRow(col.gastos, e.target.dataset.fijoGasto, { monto: nuevoMonto });
+      // también actualiza el catálogo para que los meses siguientes ya
+      // arranquen con el nuevo valor (ajuste por inflación, etc.)
+      if (e.target.dataset.fijoCat) {
+        updateRow(col.gastosFijos, e.target.dataset.fijoCat, { monto: nuevoMonto });
+      }
+    }, 600));
+  });
+  wrap.querySelectorAll("[data-quitar-mes]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const g = gastosCache.find((x) => x.id === btn.dataset.quitarMes);
+      await deleteRow(col.gastos, btn.dataset.quitarMes);
+      if (g) pushAction(makeDeleteAction(`Quitar gasto fijo (solo este mes): ${g.detalle}`, col.gastos, g.id, stripId(g)));
+      toast("Se quitó de este mes — el próximo mes se vuelve a cargar solo");
     });
-    wrap.querySelectorAll("[data-del-fijo]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const f = fijosCache.find((x) => x.id === btn.dataset.delFijo);
-        await deleteRow(col.gastosFijos, btn.dataset.delFijo);
-        if (f) {
-          pushAction(makeDeleteAction(`Eliminar gasto fijo: ${f.nombre}`, col.gastosFijos, f.id, stripId(f)));
-        }
-        toast("Gasto fijo eliminado (no se va a volver a cargar)");
-      });
+  });
+  wrap.querySelectorAll("[data-dejar-repetir]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const f = fijosCache.find((x) => x.id === btn.dataset.dejarRepetir);
+      await deleteRow(col.gastosFijos, btn.dataset.dejarRepetir);
+      if (f) pushAction(makeDeleteAction(`Dejar de repetir: ${f.nombre}`, col.gastosFijos, f.id, stripId(f)));
+      toast(`"${btn.dataset.nombre}" no se va a volver a cargar — este mes queda como está`);
     });
+  });
+}
+
+function renderFijosDelMes() {
+  const wrap = document.getElementById("fijosList");
+  const lista = gastosCache.filter((g) => g.esFijo && !esTarjeta(g));
+  rerenderPreservingFocus(wrap, () => {
+    if (!lista.length) {
+      wrap.innerHTML = `<div class="empty-state">Todavía no cargaste gastos fijos.</div>`;
+      return;
+    }
+    wrap.innerHTML = lista.map(renderFijoRow).join("");
+    wireFijoRowEvents(wrap);
+  });
+}
+
+function renderFijosTarjeta() {
+  const wrap = document.getElementById("fijosTarjetaList");
+  const lista = gastosCache.filter((g) => g.esFijo && esTarjeta(g));
+  rerenderPreservingFocus(wrap, () => {
+    if (!lista.length) {
+      wrap.innerHTML = `<div class="empty-state">Todavía no tenés suscripciones o gastos fijos en tarjeta.</div>`;
+      return;
+    }
+    wrap.innerHTML = lista.map(renderFijoRow).join("");
+    wireFijoRowEvents(wrap);
   });
 }
 
 // Aplica los gastos fijos activos al mes actual, una sola vez por mes y por
 // fijo (queda registrado en meses/{mes}.gastosFijosAplicados). Si el usuario
-// borra manualmente el gasto generado, no vuelve a aparecer.
+// borra manualmente el gasto generado ese mes ("Quitar solo este mes"), no
+// vuelve a aparecer. Si borra la plantilla completa ("Dejar de repetir"),
+// tampoco se vuelve a aplicar en ningún mes futuro.
 async function aplicarFijosDelMes() {
   if (!currentMonth || !fijosCache.length) return;
   const aplicados = mesData.gastosFijosAplicados || [];
@@ -323,8 +438,6 @@ async function aplicarFijosDelMes() {
 }
 
 // ---- Cálculos y render de totales ------------------------------------
-// gastoTotalARS(): solo efectivo/débito/transferencia — es lo que sale de las
-// cuentas este mes. La tarjeta se paga cuando llega el resumen (otro mes).
 export function gastoTotalARS() {
   return gastosCache.filter((g) => !esTarjeta(g))
     .reduce((s, g) => s + (g.moneda === "USD" ? (g.monto || 0) * cotizacion : (g.monto || 0)), 0);
