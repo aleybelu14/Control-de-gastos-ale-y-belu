@@ -8,7 +8,443 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<style>
+/* =========================================================
+   TOKENS — Blanco + Azul (marca), Rojo/Verde/Ámbar (estados)
+   Tipografía: Montserrat en todo el sistema.
+   ========================================================= */
+:root{
+  --blue-900: #0B2C6B;
+  --blue-800: #103A82;
+  --blue-700: #17479E;
+  --blue-600: #1D4ED8;
+  --blue-500: #2563EB;
+  --blue-50:  #EAF0FD;
+
+  --bg: #F3F5FA;
+  --surface: #FFFFFF;
+  --surface-sunken: #F3F5FA;
+  --line: #E2E6F0;
+  --ink: #12203F;
+  --ink-muted: #5A6580;
+  --ink-faint: #98A1B8;
+
+  --red: #DC2626;
+  --red-soft: #FCEAE9;
+  --green: #16A34A;
+  --green-soft: #E7F7ED;
+  --amber: #D97706;
+  --amber-soft: #FDF0DB;
+  --orange: #EA580C;
+
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-pill: 999px;
+  --shadow: 0 1px 2px rgba(18,32,63,0.05), 0 6px 18px rgba(18,32,63,0.06);
+  --shadow-hero: 0 8px 24px rgba(11,44,107,0.25);
+
+  --font-ui: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+*{ box-sizing: border-box; }
+html{ -webkit-text-size-adjust: 100%; }
+body{
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.45;
+  font-feature-settings: "tnum" 1;
+}
+h1,h2,h3{ font-family: var(--font-ui); margin: 0; }
+output, .num{ font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+button, input, select{ font-family: inherit; font-size: inherit; }
+:focus-visible{ outline: 2px solid var(--blue-500); outline-offset: 2px; }
+input, select{ -webkit-appearance: none; appearance: none; }
+
+/* =========================================================
+   HERO HEADER
+   ========================================================= */
+.hero{
+  background: linear-gradient(135deg, var(--blue-900), var(--blue-700));
+  color: #fff;
+  box-shadow: var(--shadow-hero);
+  padding: 22px 20px 26px;
+}
+.hero-inner{ max-width: 1080px; margin: 0 auto; }
+.hero-eyebrow{
+  font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(255,255,255,0.65); margin-bottom: 4px;
+}
+.hero-title{ font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
+.hero-row{
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+.hero-stats{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.hero-pill{
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18);
+  border-radius: var(--radius-pill); padding: 6px 12px; font-size: 12.5px; font-weight: 600;
+  color: #fff;
+}
+.hero-pill.pill-danger{ background: rgba(220,38,38,0.22); border-color: rgba(220,38,38,0.35); }
+.hero-pill.pill-amber{ background: rgba(217,119,6,0.22); border-color: rgba(217,119,6,0.35); }
+.hero-dolar{
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.2);
+  border-radius: var(--radius-pill); padding: 5px 6px 5px 12px;
+}
+.hero-dolar label{ font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: rgba(255,255,255,0.75); }
+.hero-dolar input{
+  width: 74px; border: none; background: transparent; color: #fff; font-weight: 700; text-align: right;
+}
+.hero-dolar input::placeholder{ color: rgba(255,255,255,0.5); }
+.hero-dolar input:focus-visible{ outline: none; }
+.hero-dolar button{
+  background: rgba(255,255,255,0.18); border: none; color: #fff; width: 28px; height: 28px;
+  border-radius: 50%; cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; justify-content: center;
+}
+.hero-dolar button:hover{ background: rgba(255,255,255,0.3); }
+
+/* =========================================================
+   TABS (horizontal, arriba, scrolleable en mobile)
+   ========================================================= */
+.tabbar{
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  padding: 0 10px 0 16px;
+}
+.tabbar-scroll{
+  display: flex; gap: 4px; flex: 1; min-width: 0;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.tabbar-scroll::-webkit-scrollbar{ display: none; }
+.history-controls{ display: flex; align-items: center; gap: 6px; flex-shrink: 0; padding: 8px 0; }
+.history-controls .btn-ghost{ width: 32px; height: 32px; font-size: 16px; }
+.history-controls .btn-ghost:disabled{ opacity: 0.32; cursor: not-allowed; }
+.history-controls .btn-ghost:disabled:hover{ background: transparent; }
+.tab-btn{
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: 6px;
+  padding: 13px 14px; background: none; border: none; border-bottom: 3px solid transparent;
+  color: var(--ink-muted); cursor: pointer; font-size: 13.5px; font-weight: 700;
+  white-space: nowrap;
+}
+.tab-btn .tab-icon{ font-size: 15px; line-height: 1; }
+.tab-btn.active{ color: var(--blue-700); border-bottom-color: var(--blue-600); }
+.tab-btn:hover{ color: var(--blue-700); }
+
+/* =========================================================
+   LAYOUT
+   ========================================================= */
+#app{ max-width: 1080px; margin: 0 auto; padding: 18px 16px 48px; display: block; }
+.view-title{ font-size: 20px; font-weight: 800; margin-bottom: 12px; }
+.view-sub{ font-size: 13px; color: var(--ink-muted); margin: -8px 0 16px; }
+
+.grid-2{ display: grid; grid-template-columns: 1fr; gap: 14px; }
+.grid-3{ display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 900px){
+  .grid-2{ grid-template-columns: 1fr 1fr; }
+  .grid-3{ grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 1000px){
+  #app{ padding: 24px 24px 56px; }
+}
+
+.month-nav{
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  margin-bottom: 16px;
+}
+.month-nav h1{ font-size: 18px; font-weight: 800; min-width: 160px; text-align: center; text-transform: capitalize; }
+
+.card{
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px;
+  margin-bottom: 14px;
+}
+.card-title{ font-size: 12.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); margin-bottom: 12px; }
+.card-title-row{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 8px; }
+.card-title-row .card-title{ margin-bottom: 0; }
+.card-subtitle{ font-size: 12px; color: var(--ink-faint); margin: -6px 0 10px; }
+
+/* Stat cards (estilo dashboard de referencia) */
+.stat-card{
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 16px 18px;
+}
+.stat-card-label{ font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 6px; }
+.stat-card-value{ font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
+.stat-card-value.blue{ color: var(--blue-700); }
+.stat-card-value.red{ color: var(--red); }
+.stat-card-value.green{ color: var(--green); }
+.stat-card-value.amber{ color: var(--amber); }
+.stat-card-foot{ font-size: 12px; color: var(--ink-faint); margin-top: 4px; }
+
+/* =========================================================
+   FORM FIELDS
+   ========================================================= */
+.field-row{
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--line);
+}
+.field-row:last-of-type{ border-bottom: none; }
+.field-row label{ font-size: 13px; color: var(--ink-muted); font-weight: 600; flex-shrink: 0; }
+.field-row input, .field-row select{
+  border: 1px solid var(--line); background: var(--surface-sunken);
+  border-radius: var(--radius-sm); padding: 7px 10px; text-align: right;
+  width: 140px; color: var(--ink); font-weight: 600;
+}
+.field-row input[type="text"], .field-row input[type="date"]{ text-align: left; width: auto; flex: 1; font-weight: 500; }
+.field-row input:focus, .field-row select:focus{ border-color: var(--blue-500); background: var(--surface); }
+.field-hint{ font-size: 11px; color: var(--ink-faint); }
+.total-row{ margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--line); border-bottom: none; }
+.total-row label{ font-weight: 700; color: var(--ink); }
+.total-row output{ font-weight: 800; font-size: 17px; color: var(--blue-700); }
+
+.gasto-form, .item-form, .fijo-form{ display: flex; flex-direction: column; }
+.plataforma-form{ display: flex; gap: 8px; flex-wrap: wrap; }
+.plataforma-form input, .plataforma-form select{
+  border: 1px solid var(--line); background: var(--surface-sunken);
+  border-radius: var(--radius-sm); padding: 9px 11px; font-weight: 500;
+}
+.plataforma-form input{ flex: 1; min-width: 160px; }
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+.btn-primary{
+  margin-top: 16px; background: var(--blue-600); color: #fff; border: none;
+  border-radius: var(--radius-sm); padding: 12px 18px; font-weight: 700;
+  cursor: pointer; transition: filter 0.15s ease; font-size: 14px;
+}
+.btn-primary:hover{ filter: brightness(1.08); }
+.btn-primary:active{ filter: brightness(0.95); }
+
+.btn-secondary{
+  background: var(--green); color: #fff; border: none;
+  border-radius: var(--radius-sm); padding: 10px 16px; font-weight: 700;
+  cursor: pointer; font-size: 13.5px;
+}
+.btn-secondary:hover{ filter: brightness(1.08); }
+
+.btn-outline{
+  background: #fff; color: var(--ink); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: 9px 14px; font-weight: 700;
+  cursor: pointer; font-size: 13px;
+}
+.btn-outline:hover{ background: var(--surface-sunken); }
+.btn-outline.small{ padding: 6px 10px; font-size: 12px; }
+
+.btn-accent{
+  background: var(--orange); color: #fff; border: none;
+  border-radius: var(--radius-sm); padding: 10px 16px; font-weight: 700;
+  cursor: pointer; font-size: 13.5px;
+}
+.btn-accent:hover{ filter: brightness(1.08); }
+.btn-accent:active{ filter: brightness(0.95); }
+
+.btn-ghost{
+  background: transparent; border: 1px solid var(--line); color: var(--ink-muted);
+  border-radius: var(--radius-sm); width: 34px; height: 34px; font-size: 16px;
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+}
+.btn-ghost:hover{ background: var(--surface-sunken); }
+.btn-icon-sm{
+  background: transparent; border: none; color: var(--ink-faint);
+  cursor: pointer; font-size: 15px; padding: 5px 7px; border-radius: var(--radius-sm);
+}
+.btn-icon-sm:hover{ background: var(--red-soft); color: var(--red); }
+.btn-icon-sm.edit:hover{ background: var(--blue-50); color: var(--blue-600); }
+.btn-minus, .btn-plus{
+  background: var(--surface-sunken); border: 1px solid var(--line);
+  border-radius: var(--radius-pill); width: 32px; height: 32px; font-weight: 800; font-size: 15px;
+  cursor: pointer; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+}
+.btn-minus{ color: var(--red); }
+.btn-minus:hover{ background: var(--red-soft); }
+.btn-plus{ color: var(--green); }
+.btn-plus:hover{ background: var(--green-soft); }
+
+.actions-row{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.search-input{
+  flex: 1; min-width: 180px; border: 1px solid var(--line); background: var(--surface);
+  border-radius: var(--radius-pill); padding: 10px 16px; font-weight: 500;
+}
+.search-input:focus{ border-color: var(--blue-500); }
+
+/* Chips (filtros de categoría) */
+.chips-row{ display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.chip{
+  background: #fff; border: 1px solid var(--line); color: var(--ink-muted);
+  border-radius: var(--radius-pill); padding: 7px 14px; font-size: 12.5px; font-weight: 700;
+  cursor: pointer;
+}
+.chip:hover{ background: var(--surface-sunken); }
+.chip.active{ background: var(--blue-600); border-color: var(--blue-600); color: #fff; }
+
+/* =========================================================
+   CUENTAS (accounts)
+   ========================================================= */
+.cuentas-list .field-row input{ width: 120px; }
+
+/* =========================================================
+   BALANCE CARD + STAMP
+   ========================================================= */
+.balance-card{ position: relative; overflow: hidden; }
+.balance-grid{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+@media (min-width: 560px){ .balance-grid{ grid-template-columns: repeat(4, 1fr); } }
+.balance-item{
+  background: var(--surface-sunken); border-radius: var(--radius-sm);
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 4px;
+}
+.balance-label{ font-size: 10.5px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+.balance-item output{ font-size: 16px; font-weight: 800; }
+.balance-diff output{ font-size: 18px; }
+.caja-stamp{
+  margin-top: 16px; display: inline-block;
+  font-weight: 800; font-size: 13px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 7px 16px; border: 2px solid var(--green); color: var(--green);
+  border-radius: var(--radius-pill); background: var(--green-soft);
+}
+.caja-stamp.mismatch{ border-color: var(--red); color: var(--red); background: var(--red-soft); }
+
+/* =========================================================
+   LISTS: gastos, inventario, lista de compras, fijos
+   ========================================================= */
+.gastos-list, .inventario-list, .lista-compras, .ahorros-grid, .fijos-list, .tarjeta-list{ display: flex; flex-direction: column; gap: 10px; }
+.gastos-subhead{
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--ink-faint); margin: 14px 0 2px; padding-top: 10px; border-top: 1px dashed var(--line);
+}
+.gastos-subhead:first-child{ margin-top: 0; padding-top: 0; border-top: none; }
+
+.list-row{
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; background: var(--surface); border: 1px solid var(--line);
+  border-left: 3px solid var(--blue-500); border-radius: var(--radius-sm);
+}
+.list-row.warn{ border-left-color: var(--amber); }
+.list-row.danger{ border-left-color: var(--red); }
+.list-row.ok{ border-left-color: var(--green); }
+.list-row-main{ display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.list-row-title{ font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-row-meta{ font-size: 12px; color: var(--ink-faint); }
+.list-row-amount{ font-weight: 800; white-space: nowrap; }
+.list-row-amount.usd{ color: var(--amber); }
+.list-row-actions{ display: flex; align-items: center; gap: 2px; }
+.tag{
+  display: inline-block; font-size: 10px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.04em; padding: 3px 8px; border-radius: 6px;
+  background: var(--blue-50); color: var(--blue-700); margin-right: 6px;
+}
+.tag.red{ background: var(--red-soft); color: var(--red); }
+.tag.green{ background: var(--green-soft); color: var(--green); }
+.tag.amber{ background: var(--amber-soft); color: var(--amber); }
+.empty-state{ color: var(--ink-faint); font-size: 13px; text-align: center; padding: 22px 0; }
+
+/* Fijos */
+.fijo-monto-input{
+  width: 110px; border: 1px solid var(--line); background: var(--surface-sunken);
+  border-radius: var(--radius-sm); padding: 6px 8px; text-align: right; font-weight: 700;
+}
+
+/* Inventory board (3 columnas: En stock | En uso | A reponer) */
+.inv-board{ display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 900px){
+  .inv-board{ grid-template-columns: repeat(3, 1fr); }
+}
+.inv-column{ background: var(--surface-sunken); border-radius: var(--radius); padding: 12px; }
+.inv-column-head{
+  display: flex; align-items: center; justify-content: space-between;
+  font-weight: 800; font-size: 13px; padding: 2px 4px 10px;
+}
+.inv-column-body{ display: flex; flex-direction: column; gap: 10px; min-height: 48px; }
+.inv-card{
+  background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--green);
+  border-radius: var(--radius-sm); padding: 10px 12px;
+}
+.inv-card.low-stock{ border-left-color: var(--amber); background: var(--amber-soft); }
+.inv-card.out-stock{ border-left-color: var(--red); background: var(--red-soft); }
+.inv-card-top{ display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.inv-card-name{ font-weight: 700; font-size: 13.5px; }
+.inv-qty{ font-weight: 800; font-size: 16px; }
+.inv-card-meta{ font-size: 11.5px; color: var(--ink-faint); margin-top: 4px; }
+.inv-card-actions{ display: flex; align-items: center; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+.inv-move{ display: flex; gap: 4px; margin-left: auto; }
+.inv-move .btn-outline.small{ padding: 4px 9px; }
+
+/* Ahorros platform card */
+.ahorro-card{ background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 14px; }
+.ahorro-card-head{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.ahorro-card-head h3{ font-size: 14px; font-weight: 800; }
+.ahorro-fields{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ahorro-fields .field-row{ border-bottom: none; padding: 2px 0; flex-direction: column; align-items: flex-start; gap: 4px; }
+.ahorro-fields input{ width: 100%; text-align: left; }
+.ahorro-result{ margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); display: flex; justify-content: space-between; font-size: 13px; }
+.ahorro-result .positive{ color: var(--green); font-weight: 700; }
+.ahorro-result .negative{ color: var(--red); font-weight: 700; }
+
+/* Stat bars */
+.stat-bars{ display: flex; flex-direction: column; gap: 12px; }
+.stat-bar-row{ display: flex; flex-direction: column; gap: 5px; }
+.stat-bar-labels{ display: flex; justify-content: space-between; font-size: 12.5px; }
+.stat-bar-labels span:first-child{ color: var(--ink); font-weight: 600; }
+.stat-bar-labels span:last-child{ color: var(--ink-faint); font-weight: 600; }
+.stat-bar-track{ height: 7px; background: var(--surface-sunken); border-radius: 999px; overflow: hidden; }
+.stat-bar-fill{ height: 100%; background: var(--blue-600); border-radius: 999px; }
+
+.resumen-mes{ display: flex; flex-direction: column; gap: 9px; font-size: 13px; }
+.resumen-mes .row{ display: flex; justify-content: space-between; }
+.resumen-mes .row output{ font-weight: 700; }
+
+/* =========================================================
+   MODAL (editar artículo / agregar stock)
+   ========================================================= */
+.modal-backdrop{
+  position: fixed; inset: 0; background: rgba(11,44,107,0.45);
+  display: flex; align-items: flex-end; justify-content: center; z-index: 100;
+  padding: 0;
+}
+.modal-backdrop[hidden]{ display: none; }
+.modal{
+  background: var(--surface); border-radius: 18px 18px 0 0; padding: 20px;
+  width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto;
+  box-shadow: 0 -8px 30px rgba(11,44,107,0.25);
+}
+@media (min-width: 640px){
+  .modal-backdrop{ align-items: center; }
+  .modal{ border-radius: var(--radius); }
+}
+.modal-head{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.modal-head h2{ font-size: 16px; font-weight: 800; }
+.modal-close{ background: var(--surface-sunken); border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 15px; color: var(--ink-muted); }
+.modal-close:hover{ background: var(--line); }
+.modal-actions{ display: flex; gap: 10px; margin-top: 16px; }
+.modal-actions .btn-primary{ margin-top: 0; flex: 1; }
+.modal-actions .btn-outline{ flex: 0 0 auto; }
+
+/* =========================================================
+   TOAST
+   ========================================================= */
+.toast{
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  background: var(--blue-900); color: #fff; padding: 10px 18px;
+  border-radius: var(--radius-pill); font-size: 13px; font-weight: 600; z-index: 200; box-shadow: var(--shadow);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce){
+  *{ transition: none !important; animation: none !important; }
+}
+</style>
 </head>
 <body>
 
@@ -486,6 +922,1476 @@
   </div>
 </div>
 
-<script type="module" src="main.js"></script>
+<script type="module">
+
+// ============ db.js ============
+// =====================================================================
+// Inicialización de Firebase + helpers finos sobre Firestore.
+// SDK modular v10, importado directo desde CDN (sin build step, para
+// poder alojar todo esto en GitHub Pages tal cual).
+// =====================================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
+  collection, query, where, orderBy, onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBM54QNmOrmtKJD221IxU0Bk1PDKXiWENc",
+  authDomain: "casa-control-gastos.firebaseapp.com",
+  projectId: "casa-control-gastos",
+  storageBucket: "casa-control-gastos.firebasestorage.app",
+  messagingSenderId: "11021785803",
+  appId: "1:11021785803:web:b8cfd73011fcfbb935994e"
+};
+
+const app = initializeApp(FIREBASE_CONFIG);
+const dbase = getFirestore(app);
+
+// ---- Colecciones ----------------------------------------------------
+const col = {
+  meses: collection(dbase, "meses"),
+  cuentas: collection(dbase, "cuentas"),
+  gastos: collection(dbase, "gastos"),
+  gastosFijos: collection(dbase, "gastos_fijos"),
+  inventario: collection(dbase, "inventario"),
+  plataformas: collection(dbase, "ahorros_plataformas"),
+  saldos: collection(dbase, "ahorros_saldos"),
+  config: collection(dbase, "config")
+};
+
+// ---- Genéricos --------------------------------------------------------
+function watchDoc(colRef, id, cb) {
+  return onSnapshot(
+    doc(colRef, id),
+    (snap) => cb(snap.exists() ? snap.data() : null, snap),
+    (err) => reportSnapshotError(err)
+  );
+}
+function watchCollection(q, cb) {
+  return onSnapshot(
+    q,
+    (snap) => {
+      const rows = [];
+      snap.forEach((d) => rows.push({ id: d.id, ...d.data() }));
+      cb(rows);
+    },
+    (err) => reportSnapshotError(err)
+  );
+}
+function reportSnapshotError(err) {
+  console.error("Firestore snapshot error:", err);
+  window.dispatchEvent(new CustomEvent("casita:error", { detail: err }));
+}
+async function upsertDoc(colRef, id, data) {
+  return setDoc(doc(colRef, id), data, { merge: true });
+}
+async function addRow(colRef, data) {
+  return addDoc(colRef, { ...data, createdAt: serverTimestamp() });
+}
+async function updateRow(colRef, id, data) {
+  return updateDoc(doc(colRef, id), data);
+}
+async function deleteRow(colRef, id) {
+  return deleteDoc(doc(colRef, id));
+}
+// Recrea un documento con un id específico y el contenido exacto que tenía
+// (se usa para deshacer un "eliminar" — a diferencia de upsertDoc, pisa todo
+// el documento en vez de mezclar, para restaurarlo tal cual estaba).
+async function restoreDoc(colRef, id, data) {
+  return setDoc(doc(colRef, id), data);
+}
+async function getDocOnce(colRef, id) {
+  const snap = await getDoc(doc(colRef, id));
+  return snap.exists() ? snap.data() : null;
+}
+
+// ============ utils.js ============
+// =====================================================================
+// Constantes y utilidades compartidas
+// =====================================================================
+
+const CATEGORIAS = [
+  "Vivienda (alq+exp)", "Servicios básicos", "Servicios extra",
+  "Mantenimiento auto", "Supermercado", "Salud", "Movilidad",
+  "Farmacia", "Gustitos", "Salidas", "Hogar", "Regalos",
+  "Viaje/vacas", "Otro"
+];
+
+const FORMAS_PAGO = ["TRANS", "DEB", "EF", "App", "CRED", "MODO", "QR", "Otro"];
+
+const CUENTAS_FIJAS = [
+  "Ciudad/buepp", "Personal Pay", "Cuenta DNI",
+  "Personal Pay Reservas", "Efectivo", "YPF Belu", "YPF Ale"
+];
+
+const CATEGORIAS_INVENTARIO = [
+  "Cocina", "Baño", "Limpieza", "Living/Comedor", "Dormitorio",
+  "Lavadero", "Herramientas", "Mascotas", "Otro"
+];
+
+// Estado de uso de un artículo (para cosas que se compran de a una — aceite,
+// condimentos, detergente — y van pasando de "guardado" a "en uso" a
+// "hay que comprar más" sin depender solo del número de cantidad).
+const ESTADOS_INVENTARIO = [
+  { key: "stock", label: "En stock", tagClass: "" },
+  { key: "en_uso", label: "En uso", tagClass: "green" },
+  { key: "reponer", label: "A reponer", tagClass: "red" }
+];
+
+const MESES_LARGO = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+];
+
+function slug(str) {
+  return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+function monthId(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function shiftMonth(id, delta) {
+  const [y, m] = id.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return monthId(d);
+}
+
+function monthLabel(id) {
+  const [y, m] = id.split("-").map(Number);
+  return `${MESES_LARGO[m - 1]} ${y}`;
+}
+
+function fmtARS(n) {
+  const v = Number(n) || 0;
+  return "$" + v.toLocaleString("es-AR", { maximumFractionDigits: 0 });
+}
+function fmtUSD(n) {
+  const v = Number(n) || 0;
+  return "US$" + v.toLocaleString("es-AR", { maximumFractionDigits: 2 });
+}
+function fmtPct(n) {
+  const v = Number(n) || 0;
+  return v.toLocaleString("es-AR", { maximumFractionDigits: 1 }) + "%";
+}
+
+function fmtDate(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
+}
+
+function daysBetween(isoFrom, isoTo) {
+  if (!isoFrom || !isoTo) return null;
+  const a = new Date(isoFrom + "T00:00:00");
+  const b = new Date(isoTo + "T00:00:00");
+  if (isNaN(a) || isNaN(b)) return null;
+  return Math.max(0, Math.round((b - a) / 86400000));
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function debounce(fn, ms = 500) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
+}
+
+// Reconstruye el HTML de un contenedor sin robarle el tipeo al usuario: si
+// justo en ese momento hay un input/select con foco adentro del contenedor,
+// después de reconstruir se le restaura el valor tipeado, el cursor y el
+// foco. Se usa en toda lista que se repinta sola por un snapshot de
+// Firestore mientras el usuario puede estar escribiendo en uno de sus campos.
+function rerenderPreservingFocus(container, rebuildFn) {
+  const active = document.activeElement;
+  let focusInfo = null;
+  if (active && container.contains(active) && active.matches("input, select, textarea")) {
+    focusInfo = {
+      key: JSON.stringify(active.dataset || {}),
+      tag: active.tagName,
+      value: active.value,
+      selectionStart: active.selectionStart,
+      selectionEnd: active.selectionEnd
+    };
+  }
+  rebuildFn();
+  if (focusInfo) {
+    const candidates = container.querySelectorAll("input, select, textarea");
+    for (const el of candidates) {
+      if (el.tagName === focusInfo.tag && JSON.stringify(el.dataset || {}) === focusInfo.key) {
+        el.value = focusInfo.value;
+        el.focus();
+        if (typeof focusInfo.selectionStart === "number") {
+          try { el.setSelectionRange(focusInfo.selectionStart, focusInfo.selectionEnd); } catch (err) { /* algunos inputs numéricos no soportan selección */ }
+        }
+        break;
+      }
+    }
+  }
+}
+
+// Mini pub-sub: los módulos avisan "notifyUpdate()" después de renderizar,
+// y main.js escucha para refrescar los pills del header con datos en vivo.
+function notifyUpdate() {
+  window.dispatchEvent(new CustomEvent("casita:update"));
+}
+function onUpdate(cb) {
+  window.addEventListener("casita:update", cb);
+}
+
+function toast(msg) {
+  const el = document.getElementById("toast");
+  if (!el) return;
+  el.textContent = msg;
+  el.hidden = false;
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { el.hidden = true; }, 2200);
+}
+
+// ============ history.js ============
+// =====================================================================
+// Historial de deshacer/rehacer. Guarda las últimas 5 acciones "de un
+// click" (agregar, eliminar, editar) de gastos, gastos fijos, inventario
+// y plataformas de ahorro. No registra campos de tipeo continuo (sueldos,
+// saldos de cuentas, cotización) para no llenar el historial con estados
+// intermedios mientras se escribe.
+// =====================================================================
+const MAX = 5;
+let undoStack = [];
+let redoStack = [];
+let undoBtn = null, redoBtn = null;
+
+function initHistoryUI() {
+  undoBtn = document.getElementById("undoBtn");
+  redoBtn = document.getElementById("redoBtn");
+  undoBtn.addEventListener("click", undo);
+  redoBtn.addEventListener("click", redo);
+  refreshButtons();
+}
+
+function refreshButtons() {
+  if (!undoBtn || !redoBtn) return;
+  undoBtn.disabled = undoStack.length === 0;
+  redoBtn.disabled = redoStack.length === 0;
+  undoBtn.title = undoStack.length ? `Deshacer: ${undoStack[undoStack.length - 1].label}` : "Nada para deshacer";
+  redoBtn.title = redoStack.length ? `Rehacer: ${redoStack[redoStack.length - 1].label}` : "Nada para rehacer";
+}
+
+function pushAction(action) {
+  undoStack.push(action);
+  if (undoStack.length > MAX) undoStack.shift();
+  redoStack = [];
+  refreshButtons();
+}
+
+async function undo() {
+  const action = undoStack.pop();
+  if (!action) return;
+  try {
+    await action.undo();
+    redoStack.push(action);
+    if (redoStack.length > MAX) redoStack.shift();
+    toast(`Deshecho: ${action.label}`);
+  } catch (err) {
+    console.error(err);
+    undoStack.push(action);
+    toast("No se pudo deshacer");
+  }
+  refreshButtons();
+}
+
+async function redo() {
+  const action = redoStack.pop();
+  if (!action) return;
+  try {
+    await action.redo();
+    undoStack.push(action);
+    if (undoStack.length > MAX) undoStack.shift();
+    toast(`Rehecho: ${action.label}`);
+  } catch (err) {
+    console.error(err);
+    redoStack.push(action);
+    toast("No se pudo rehacer");
+  }
+  refreshButtons();
+}
+
+// ---- Fábricas de acciones reversibles -----------------------------------
+// "Agregar": deshacer = borrar el doc creado; rehacer = volver a crearlo
+// (puede tomar un id nuevo — por eso queda en una variable mutable local).
+function makeAddAction(label, colRef, data, initialId) {
+  let id = initialId;
+  return {
+    label,
+    undo: async () => { await deleteRow(colRef, id); },
+    redo: async () => { const ref = await addRow(colRef, data); id = ref.id; }
+  };
+}
+
+// "Eliminar": deshacer = recrear el doc tal cual estaba (mismo id);
+// rehacer = borrarlo de nuevo.
+function makeDeleteAction(label, colRef, id, dataSnapshot) {
+  return {
+    label,
+    undo: async () => { await restoreDoc(colRef, id, dataSnapshot); },
+    redo: async () => { await deleteRow(colRef, id); }
+  };
+}
+
+// "Editar" (incluye -1 / +agregar en inventario): deshacer = volver a los
+// valores anteriores de los campos tocados; rehacer = aplicar los nuevos.
+function makeUpdateAction(label, colRef, id, dataBefore, dataAfter) {
+  return {
+    label,
+    undo: async () => { await updateRow(colRef, id, dataBefore); },
+    redo: async () => { await updateRow(colRef, id, dataAfter); }
+  };
+}
+
+// Quita el campo "id" que agrega watchCollection antes de guardar un
+// snapshot para restaurar (el doc original no tenía ese campo).
+function stripId(obj) {
+  const { id, ...rest } = obj;
+  return rest;
+}
+
+// ============ gastos.js ============
+let currentMonth = monthId();
+let cotizacion = 1000;
+let mesData = {};
+let cuentasData = {};      // nombre -> saldo
+let gastosCache = [];      // todos los gastos del mes (efectivo + tarjeta, incluye fijos aplicados)
+let fijosCache = [];       // catálogo de gastos fijos (colección aparte, sin mes)
+let gastosSearchTerm = "";
+let unsubMes = null, unsubCuentas = null, unsubGastos = null, unsubFijos = null;
+let cuentasLoadedOnce = false; // evita reconstruir los inputs de "Distribución de caja" en cada eco
+
+function getCotizacion() { return cotizacion; }
+function setCotizacion(v) { cotizacion = v || 1; render(); }
+
+function initGastos() {
+  fillSelect("g-categoria", CATEGORIAS);
+  fillSelect("g-formaPago", FORMAS_PAGO);
+  fillSelect("eg-categoria", CATEGORIAS);
+  fillSelect("eg-formaPago", FORMAS_PAGO);
+  fillSelect("f-categoria", CATEGORIAS);
+  fillSelect("f-formaPago", FORMAS_PAGO); // incluye CRED: para suscripciones fijas en tarjeta
+  document.getElementById("g-fecha").value = new Date().toISOString().slice(0, 10);
+
+  document.getElementById("prevMonth").addEventListener("click", () => switchMonth(shiftMonth(currentMonth, -1)));
+  document.getElementById("nextMonth").addEventListener("click", () => switchMonth(shiftMonth(currentMonth, 1)));
+
+  ["in-sueldoAlejo", "in-sueldoBelen", "in-sobrante", "in-reintegros", "in-extra"].forEach((id) => {
+    document.getElementById(id).addEventListener("input", debounce(saveIngresos, 500));
+  });
+
+  document.getElementById("gastoForm").addEventListener("submit", onAddGasto);
+  document.getElementById("fijoForm").addEventListener("submit", onAddFijo);
+
+  document.getElementById("gastosSearch").addEventListener("input", (e) => {
+    gastosSearchTerm = e.target.value.trim().toLowerCase();
+    renderGastosUnificados();
+  });
+
+  // ---- Botones "+ ..." que muestran/ocultan los formularios ----
+  const panelFijo = document.getElementById("panelFijo");
+  const panelGasto = document.getElementById("panelGasto");
+  document.getElementById("toggleFijoMes").addEventListener("click", () => {
+    panelGasto.hidden = true;
+    document.getElementById("panelFijoTitle").textContent = "Agregar gasto fijo del mes";
+    document.getElementById("f-formaPago").value = "TRANS";
+    panelFijo.hidden = false;
+  });
+  document.getElementById("toggleFijoTarjeta").addEventListener("click", () => {
+    panelGasto.hidden = true;
+    document.getElementById("panelFijoTitle").textContent = "Agregar gasto fijo de la tarjeta";
+    document.getElementById("f-formaPago").value = "CRED";
+    panelFijo.hidden = false;
+  });
+  document.getElementById("toggleNuevoGasto").addEventListener("click", () => {
+    panelFijo.hidden = true;
+    panelGasto.hidden = false;
+  });
+  document.getElementById("panelFijoClose").addEventListener("click", () => (panelFijo.hidden = true));
+  document.getElementById("panelGastoClose").addEventListener("click", () => (panelGasto.hidden = true));
+
+  // ---- Modal: editar gasto ----
+  const editGastoModal = document.getElementById("editGastoModal");
+  document.getElementById("editGastoForm").addEventListener("submit", onSubmitEditGasto);
+  document.getElementById("editGastoModalClose").addEventListener("click", () => (editGastoModal.hidden = true));
+  document.getElementById("editGastoModalCancel").addEventListener("click", () => (editGastoModal.hidden = true));
+  editGastoModal.addEventListener("click", (e) => { if (e.target === editGastoModal) editGastoModal.hidden = true; });
+
+  // Catálogo de gastos fijos: solo se usa para saber qué aplicar cada mes y
+  // como referencia para "dejar de repetir". No dispara ningún render de
+  // listas (esas se arman en base a los gastos reales del mes, más abajo).
+  unsubFijos = watchCollection(query(col.gastosFijos, orderBy("nombre")), (rows) => {
+    fijosCache = rows;
+    aplicarFijosDelMes();
+  });
+
+  switchMonth(currentMonth);
+}
+
+function fillSelect(id, options) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = options.map((o) => `<option value="${o}">${o}</option>`).join("");
+}
+
+async function switchMonth(mesId) {
+  currentMonth = mesId;
+  document.getElementById("monthLabel").textContent = monthLabel(mesId);
+
+  if (unsubMes) unsubMes();
+  if (unsubCuentas) unsubCuentas();
+  if (unsubGastos) unsubGastos();
+
+  unsubMes = watchDoc(col.meses, mesId, async (data) => {
+    mesData = data || {};
+    document.getElementById("in-sueldoAlejo").value = mesData.sueldoAlejo ?? "";
+    document.getElementById("in-sueldoBelen").value = mesData.sueldoBelen ?? "";
+    document.getElementById("in-reintegros").value = mesData.reintegros ?? "";
+    document.getElementById("in-extra").value = mesData.extra ?? "";
+
+    if (mesData.sobranteAnterior === undefined || mesData.sobranteAnterior === null) {
+      const sugerido = await computeDisponibleAnterior(mesId);
+      document.getElementById("in-sobrante").value = sugerido || "";
+      document.getElementById("sobranteAuto").textContent = sugerido ? `calculado del mes anterior: ${fmtARS(sugerido)}` : "";
+      if (sugerido) saveIngresos(); // persistir el cierre automático del mes previo
+    } else {
+      document.getElementById("in-sobrante").value = mesData.sobranteAnterior;
+      document.getElementById("sobranteAuto").textContent = "";
+    }
+    render();
+    aplicarFijosDelMes();
+  });
+
+  cuentasData = {};
+  CUENTAS_FIJAS.forEach((c) => (cuentasData[c] = 0));
+  cuentasLoadedOnce = false;
+  renderCuentas(); // paint inputs immediately, values fill in as snapshot arrives
+
+  const qCuentas = query(col.cuentas, where("mes", "==", mesId));
+  unsubCuentas = watchCollection(qCuentas, (rows) => {
+    cuentasData = {};
+    CUENTAS_FIJAS.forEach((c) => (cuentasData[c] = 0));
+    rows.forEach((r) => (cuentasData[r.nombre] = r.saldo || 0));
+    if (!cuentasLoadedOnce) {
+      cuentasLoadedOnce = true;
+      renderCuentas();
+    }
+    render();
+  });
+
+  const qGastos = query(col.gastos, where("mes", "==", mesId));
+  unsubGastos = watchCollection(qGastos, (rows) => {
+    gastosCache = rows.slice().sort((a, b) => (b.fecha || "").localeCompare(a.fecha || ""));
+    renderGastosUnificados();
+    render();
+  });
+}
+
+async function computeDisponibleAnterior(mesId) {
+  const prevId = shiftMonth(mesId, -1);
+  // suma de cuentas del mes anterior = disponible real de ese mes -> sobrante sugerido
+  const qPrev = query(col.cuentas, where("mes", "==", prevId));
+  return new Promise((resolve) => {
+    const unsub = watchCollection(qPrev, (rows) => {
+      unsub();
+      const total = rows.reduce((s, r) => s + (r.saldo || 0), 0);
+      resolve(total);
+    });
+  });
+}
+
+function saveIngresos() {
+  const data = {
+    sueldoAlejo: Number(document.getElementById("in-sueldoAlejo").value) || 0,
+    sueldoBelen: Number(document.getElementById("in-sueldoBelen").value) || 0,
+    sobranteAnterior: Number(document.getElementById("in-sobrante").value) || 0,
+    reintegros: Number(document.getElementById("in-reintegros").value) || 0,
+    extra: Number(document.getElementById("in-extra").value) || 0
+  };
+  mesData = { ...mesData, ...data };
+  upsertDoc(col.meses, currentMonth, data);
+  render();
+}
+
+function renderCuentas() {
+  const wrap = document.getElementById("cuentasList");
+  rerenderPreservingFocus(wrap, () => {
+    wrap.innerHTML = CUENTAS_FIJAS.map((nombre) => `
+      <div class="field-row">
+        <label>${nombre}</label>
+        <input type="number" step="0.01" inputmode="decimal" data-cuenta="${nombre}" value="${cuentasData[nombre] ?? 0}">
+      </div>
+    `).join("");
+    wrap.querySelectorAll("input[data-cuenta]").forEach((input) => {
+      input.addEventListener("input", debounce((e) => saveCuenta(e.target.dataset.cuenta, e.target.value), 500));
+    });
+  });
+}
+
+function saveCuenta(nombre, valor) {
+  const saldo = Number(valor) || 0;
+  cuentasData[nombre] = saldo;
+  const id = `${currentMonth}__${slug(nombre)}`;
+  upsertDoc(col.cuentas, id, { mes: currentMonth, nombre, saldo });
+  render();
+}
+
+// ---- Gastos (carga manual) ---------------------------------------------
+async function onAddGasto(e) {
+  e.preventDefault();
+  const data = {
+    mes: currentMonth,
+    fecha: document.getElementById("g-fecha").value,
+    monto: Number(document.getElementById("g-monto").value) || 0,
+    moneda: document.getElementById("g-moneda").value,
+    categoria: document.getElementById("g-categoria").value,
+    detalle: document.getElementById("g-detalle").value.trim(),
+    formaPago: document.getElementById("g-formaPago").value,
+    entidad: document.getElementById("g-entidad").value.trim()
+  };
+  if (!data.monto) { toast("Ingresá un monto"); return; }
+  const ref = await addRow(col.gastos, data);
+  pushAction(makeAddAction(`Agregar gasto: ${data.detalle || data.categoria}`, col.gastos, data, ref.id));
+  e.target.reset();
+  document.getElementById("g-fecha").value = new Date().toISOString().slice(0, 10);
+  document.getElementById("panelGasto").hidden = true;
+  toast("Gasto agregado");
+}
+
+async function onDeleteGasto(id) {
+  const g = gastosCache.find((x) => x.id === id);
+  await deleteRow(col.gastos, id);
+  if (g) {
+    pushAction(makeDeleteAction(`Eliminar gasto: ${g.detalle || g.categoria}`, col.gastos, id, stripId(g)));
+  }
+  toast("Gasto eliminado");
+}
+
+function onOpenEditGasto(g) {
+  document.getElementById("eg-id").value = g.id;
+  document.getElementById("eg-fecha").value = g.fecha || "";
+  document.getElementById("eg-monto").value = g.monto || 0;
+  document.getElementById("eg-moneda").value = g.moneda || "ARS";
+  document.getElementById("eg-categoria").value = g.categoria || CATEGORIAS[0];
+  document.getElementById("eg-detalle").value = g.detalle || "";
+  document.getElementById("eg-formaPago").value = g.formaPago || FORMAS_PAGO[0];
+  document.getElementById("eg-entidad").value = g.entidad || "";
+  document.getElementById("editGastoModal").hidden = false;
+}
+
+async function onSubmitEditGasto(e) {
+  e.preventDefault();
+  const id = document.getElementById("eg-id").value;
+  const g = gastosCache.find((x) => x.id === id);
+  const data = {
+    fecha: document.getElementById("eg-fecha").value,
+    monto: Number(document.getElementById("eg-monto").value) || 0,
+    moneda: document.getElementById("eg-moneda").value,
+    categoria: document.getElementById("eg-categoria").value,
+    detalle: document.getElementById("eg-detalle").value.trim(),
+    formaPago: document.getElementById("eg-formaPago").value,
+    entidad: document.getElementById("eg-entidad").value.trim()
+  };
+  await updateRow(col.gastos, id, data);
+  if (g) {
+    const before = {
+      fecha: g.fecha || "", monto: g.monto || 0, moneda: g.moneda || "ARS",
+      categoria: g.categoria || "", detalle: g.detalle || "", formaPago: g.formaPago || "", entidad: g.entidad || ""
+    };
+    pushAction(makeUpdateAction(`Editar gasto: ${data.detalle || data.categoria}`, col.gastos, id, before, data));
+  }
+  document.getElementById("editGastoModal").hidden = true;
+  toast("Gasto actualizado");
+}
+
+function esTarjeta(g) { return g.formaPago === "CRED"; }
+function matchesSearch(g, term) {
+  if (!term) return true;
+  return [g.detalle, g.categoria, g.entidad, g.formaPago].some((v) => (v || "").toLowerCase().includes(term));
+}
+
+function renderGastosUnificados() {
+  const wrap = document.getElementById("gastosList");
+  const term = gastosSearchTerm;
+  const filtrados = gastosCache.filter((g) => matchesSearch(g, term));
+
+  const fijosMes = filtrados.filter((g) => g.esFijo && !esTarjeta(g));
+  const fijosTarjeta = filtrados.filter((g) => g.esFijo && esTarjeta(g));
+  const variablesResto = filtrados.filter((g) => !g.esFijo)
+    .slice().sort((a, b) => (a.fecha || "").localeCompare(b.fecha || "")); // cronológico: primer día arriba
+
+  if (!filtrados.length) {
+    wrap.innerHTML = `<div class="empty-state">${term ? "No hay gastos que coincidan con la búsqueda." : "Todavía no cargaste gastos este mes."}</div>`;
+    return;
+  }
+
+  // Igual que en la planilla: primero fijos del mes, después variables
+  // (arranca con las cuotas de tarjeta fijas y sigue con todo lo demás —
+  // tarjeta suelta y gastos normales — mezclado por fecha).
+  let html = "";
+  if (fijosMes.length) html += `<div class="gastos-subhead">Gastos fijos del mes</div>` + fijosMes.map(renderFijoRow).join("");
+  if (fijosTarjeta.length || variablesResto.length) {
+    html += `<div class="gastos-subhead">Gastos variables</div>`;
+    html += fijosTarjeta.map(renderFijoRow).join("");
+    html += variablesResto.map(gastoRow).join("");
+  }
+
+  rerenderPreservingFocus(wrap, () => {
+    wrap.innerHTML = html;
+    wireFijoRowEvents(wrap);
+    wrap.querySelectorAll("[data-editg]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const g = gastosCache.find((x) => x.id === btn.dataset.editg);
+        if (g) onOpenEditGasto(g);
+      });
+    });
+    wrap.querySelectorAll("[data-del]").forEach((btn) => {
+      btn.addEventListener("click", () => onDeleteGasto(btn.dataset.del));
+    });
+  });
+}
+
+function gastoRow(g) {
+  const esCred = esTarjeta(g);
+  return `
+    <div class="list-row ${esCred ? "warn" : ""}">
+      <div class="list-row-main">
+        <div class="list-row-title"><span class="tag ${esCred ? "amber" : ""}">${g.categoria || "Sin categoría"}</span>${g.detalle || "—"}</div>
+        <div class="list-row-meta">${g.fecha || ""} · ${g.formaPago || ""} ${g.entidad ? "· " + g.entidad : ""}</div>
+      </div>
+      <div class="list-row-actions">
+        <span class="list-row-amount ${g.moneda === "USD" ? "usd" : ""}">${g.moneda === "USD" ? fmtUSD(g.monto) : fmtARS(g.monto)}</span>
+        <button class="btn-icon-sm edit" data-editg="${g.id}" title="Editar">✎</button>
+        <button class="btn-icon-sm" data-del="${g.id}" title="Eliminar">✕</button>
+      </div>
+    </div>
+  `;
+}
+
+// ---- Gastos fijos (catálogo) ---------------------------------------------
+async function onAddFijo(e) {
+  e.preventDefault();
+  const data = {
+    nombre: document.getElementById("f-nombre").value.trim(),
+    monto: Number(document.getElementById("f-monto").value) || 0,
+    moneda: document.getElementById("f-moneda").value,
+    categoria: document.getElementById("f-categoria").value,
+    formaPago: document.getElementById("f-formaPago").value,
+    entidad: document.getElementById("f-entidad").value.trim(),
+    activo: true
+  };
+  if (!data.nombre || !data.monto) { toast("Completá nombre y monto"); return; }
+  const ref = await addRow(col.gastosFijos, data);
+  pushAction(makeAddAction(`Agregar gasto fijo: ${data.nombre}`, col.gastosFijos, data, ref.id));
+  e.target.reset();
+  document.getElementById("panelFijo").hidden = true;
+  toast("Gasto fijo agregado — se va a cargar solo cada mes");
+}
+
+// Las dos cards de fijos (efectivo y tarjeta) muestran la instancia REAL de
+// este mes (un doc en "gastos" con esFijo:true), no el catálogo — así
+// editar el monto acá afecta este mes y, al pisar también el catálogo,
+// todos los que vengan, sin tocar los ya pasados.
+function renderFijoRow(g) {
+  const fijo = fijosCache.find((f) => f.id === g.fijoId);
+  return `
+    <div class="list-row ok">
+      <div class="list-row-main">
+        <div class="list-row-title"><span class="tag">${g.categoria || "Sin categoría"}</span>${g.detalle || fijo?.nombre || "—"}</div>
+        <div class="list-row-meta">${g.formaPago || ""} ${g.entidad ? "· " + g.entidad : ""} · se aplica todos los meses</div>
+      </div>
+      <div class="list-row-actions">
+        <span style="font-size:12px;color:var(--ink-faint);">${g.moneda === "USD" ? "US$" : "$"}</span>
+        <input type="number" class="fijo-monto-input" step="0.01" data-fijo-gasto="${g.id}" data-fijo-cat="${g.fijoId || ""}" value="${g.monto || 0}">
+        <button class="btn-icon-sm" data-quitar-mes="${g.id}" title="Quitar solo este mes">✕</button>
+      </div>
+    </div>
+    ${fijo ? `<div style="text-align:right;margin:-6px 0 8px;"><button type="button" class="btn-outline small" data-dejar-repetir="${fijo.id}" data-nombre="${fijo.nombre}">Dejar de repetir este gasto</button></div>` : ""}
+  `;
+}
+
+function wireFijoRowEvents(wrap) {
+  wrap.querySelectorAll("[data-fijo-gasto]").forEach((input) => {
+    input.addEventListener("input", debounce((e) => {
+      const nuevoMonto = Number(e.target.value) || 0;
+      updateRow(col.gastos, e.target.dataset.fijoGasto, { monto: nuevoMonto });
+      // también actualiza el catálogo para que los meses siguientes ya
+      // arranquen con el nuevo valor (ajuste por inflación, etc.)
+      if (e.target.dataset.fijoCat) {
+        updateRow(col.gastosFijos, e.target.dataset.fijoCat, { monto: nuevoMonto });
+      }
+    }, 600));
+  });
+  wrap.querySelectorAll("[data-quitar-mes]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const g = gastosCache.find((x) => x.id === btn.dataset.quitarMes);
+      await deleteRow(col.gastos, btn.dataset.quitarMes);
+      if (g && g.fijoId) {
+        const quitados = [...(mesData.gastosFijosQuitados || []), g.fijoId];
+        mesData = { ...mesData, gastosFijosQuitados: quitados };
+        await upsertDoc(col.meses, currentMonth, { gastosFijosQuitados: quitados });
+      }
+      if (g) pushAction(makeDeleteAction(`Quitar gasto fijo (solo este mes): ${g.detalle}`, col.gastos, g.id, stripId(g)));
+      toast("Se quitó de este mes — el próximo mes se vuelve a cargar solo");
+    });
+  });
+  wrap.querySelectorAll("[data-dejar-repetir]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const f = fijosCache.find((x) => x.id === btn.dataset.dejarRepetir);
+      await deleteRow(col.gastosFijos, btn.dataset.dejarRepetir);
+      if (f) pushAction(makeDeleteAction(`Dejar de repetir: ${f.nombre}`, col.gastosFijos, f.id, stripId(f)));
+      toast(`"${btn.dataset.nombre}" no se va a volver a cargar — este mes queda como está`);
+    });
+  });
+}
+
+// Aplica los gastos fijos activos al mes actual usando un ID DETERMINÍSTICO
+// (mes + fijoId) y upsert con merge — no "crear y después marcar como
+// aplicado" (eso era lo que se podía cortar a mitad de camino con un F5 y
+// duplicaba). Así, sin importar cuántas veces se llame esta función — por
+// dos listeners en simultáneo, por una recarga interrumpida, por lo que
+// sea — siempre termina pisando el MISMO documento, nunca crea uno nuevo.
+// "Quitar solo este mes" se guarda aparte, en meses/{mes}.gastosFijosQuitados
+// (una lista de fijoId que este mes NO hay que aplicar); "Dejar de repetir"
+// borra la plantilla del catálogo y ya no vuelve a aparecer en ningún mes.
+//
+// Compatibilidad con meses cargados antes de este cambio: esos gastos fijos
+// quedaron con un ID al azar (no el determinístico de ahora). Antes de crear
+// nada, se chequea si el fijo YA tiene un gasto ese mes (con cualquier ID) —
+// si ya existe, no se crea uno nuevo con el ID determinístico al lado.
+const mesesAplicandoFijos = new Set();
+async function aplicarFijosDelMes() {
+  const mes = currentMonth;
+  if (!mes || !fijosCache.length) return;
+  if (mesesAplicandoFijos.has(mes)) return;
+
+  const quitados = mesData.gastosFijosQuitados || [];
+  const activos = fijosCache.filter((f) => f.activo !== false && !quitados.includes(f.id));
+  if (!activos.length) return;
+
+  const yaAplicados = new Set(
+    gastosCache.filter((g) => g.esFijo && g.mes === mes && g.fijoId).map((g) => g.fijoId)
+  );
+  const pendientes = activos.filter((f) => !yaAplicados.has(f.id));
+  if (!pendientes.length) return;
+
+  mesesAplicandoFijos.add(mes);
+  try {
+    for (const f of pendientes) {
+      const gastoId = `${mes}__fijo__${f.id}`;
+      await upsertDoc(col.gastos, gastoId, {
+        mes,
+        fecha: `${mes}-01`,
+        monto: f.monto || 0,
+        moneda: f.moneda || "ARS",
+        categoria: f.categoria || "Otro",
+        detalle: f.nombre,
+        formaPago: f.formaPago || "TRANS",
+        entidad: f.entidad || "",
+        esFijo: true,
+        fijoId: f.id
+      });
+    }
+  } finally {
+    mesesAplicandoFijos.delete(mes);
+  }
+}
+
+// ---- Cálculos y render de totales ------------------------------------
+function gastoTotalARS() {
+  return gastosCache.filter((g) => !esTarjeta(g))
+    .reduce((s, g) => s + (g.moneda === "USD" ? (g.monto || 0) * cotizacion : (g.monto || 0)), 0);
+}
+function gastoTarjetaARS() {
+  return gastosCache.filter(esTarjeta)
+    .reduce((s, g) => s + (g.moneda === "USD" ? (g.monto || 0) * cotizacion : (g.monto || 0)), 0);
+}
+function ingresoTotalARS() {
+  return (mesData.sueldoAlejo || 0) + (mesData.sueldoBelen || 0) + (mesData.sobranteAnterior || 0) +
+    (mesData.reintegros || 0) + (mesData.extra || 0);
+}
+function disponibleTotalARS() {
+  return Object.values(cuentasData).reduce((s, v) => s + (v || 0), 0);
+}
+function getCajaCuadra() {
+  const diff = disponibleTotalARS() - (ingresoTotalARS() - gastoTotalARS());
+  return Math.abs(diff) < 1;
+}
+
+function render() {
+  const ingreso = ingresoTotalARS();
+  const gasto = gastoTotalARS();
+  const disponible = disponibleTotalARS();
+  const saldoTeorico = ingreso - gasto;
+  const diferencia = disponible - saldoTeorico;
+
+  document.getElementById("out-ingresoTotal").textContent = fmtARS(ingreso);
+  document.getElementById("out-disponibleTotal").textContent = fmtARS(disponible);
+  document.getElementById("out-gastoTotal").textContent = fmtARS(gasto);
+  document.getElementById("out-saldoTeorico").textContent = fmtARS(saldoTeorico);
+  document.getElementById("out-disponibleTotal2").textContent = fmtARS(disponible);
+  document.getElementById("out-diferenciaCaja").textContent = fmtARS(diferencia);
+
+  document.getElementById("stat-ingreso").textContent = fmtARS(ingreso);
+  document.getElementById("stat-gasto").textContent = fmtARS(gasto);
+  document.getElementById("stat-disponible").textContent = fmtARS(disponible);
+
+  const stamp = document.getElementById("cajaStamp");
+  const cuadra = Math.abs(diferencia) < 1;
+  stamp.textContent = cuadra ? "CUADRA" : "DESCUADRE";
+  stamp.classList.toggle("mismatch", !cuadra);
+
+  renderCategoriaStats(gasto);
+  renderResumen(ingreso, gasto);
+  notifyUpdate();
+}
+
+function renderCategoriaStats(gastoTotal) {
+  const wrap = document.getElementById("categoriaStats");
+  const porCategoria = {};
+  gastosCache.filter((g) => !esTarjeta(g)).forEach((g) => {
+    const monto = g.moneda === "USD" ? (g.monto || 0) * cotizacion : (g.monto || 0);
+    porCategoria[g.categoria || "Otro"] = (porCategoria[g.categoria || "Otro"] || 0) + monto;
+  });
+  const entries = Object.entries(porCategoria).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) { wrap.innerHTML = `<div class="empty-state">Sin datos todavía.</div>`; return; }
+  wrap.innerHTML = entries.map(([cat, monto]) => {
+    const pct = gastoTotal ? (monto / gastoTotal) * 100 : 0;
+    return `
+      <div class="stat-bar-row">
+        <div class="stat-bar-labels"><span>${cat}</span><span>${fmtARS(monto)} · ${pct.toFixed(1)}%</span></div>
+        <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${Math.min(pct, 100)}%"></div></div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderResumen(ingreso, gasto) {
+  const wrap = document.getElementById("resumenMes");
+  const tarjeta = gastoTarjetaARS();
+  const ahorro = ingreso - gasto;
+  const pctAhorro = ingreso ? (ahorro / ingreso) * 100 : 0;
+  wrap.innerHTML = `
+    <div class="row"><span>Ingreso total</span><output>${fmtARS(ingreso)}</output></div>
+    <div class="row"><span>Gasto total (efec./déb.)</span><output>${fmtARS(gasto)}</output></div>
+    <div class="row"><span>Gasto en tarjeta (no incluido en balance)</span><output>${fmtARS(tarjeta)}</output></div>
+    <div class="row"><span>Excedente del mes</span><output>${fmtARS(ahorro)}</output></div>
+    <div class="row"><span>% de ingresos no gastado</span><output>${pctAhorro.toFixed(1)}%</output></div>
+    <div class="row"><span>Cantidad de gastos cargados</span><output>${gastosCache.filter((g) => !esTarjeta(g)).length}</output></div>
+  `;
+}
+
+// ============ inventario.js ============
+let itemsCache = [];
+let unsub = null;
+let categoriaFiltro = null; // null = todas
+let searchTerm = "";
+
+function initInventario() {
+  fillSelect("i-categoria", CATEGORIAS_INVENTARIO);
+  fillSelect("e-categoria", CATEGORIAS_INVENTARIO);
+  fillEstadoSelect("i-estado");
+  fillEstadoSelect("e-estado");
+  document.getElementById("i-estado").value = "en_uso";
+
+  document.getElementById("itemForm").addEventListener("submit", onAddItem);
+  document.getElementById("inventarioSearch").addEventListener("input", (e) => {
+    searchTerm = e.target.value.trim().toLowerCase();
+    renderInventario();
+  });
+
+  // ---- Modal: editar artículo ----
+  const editModal = document.getElementById("editModal");
+  document.getElementById("editForm").addEventListener("submit", onSubmitEdit);
+  document.getElementById("editModalClose").addEventListener("click", () => closeModal(editModal));
+  document.getElementById("editModalCancel").addEventListener("click", () => closeModal(editModal));
+  editModal.addEventListener("click", (e) => { if (e.target === editModal) closeModal(editModal); });
+
+  // ---- Modal: agregar stock ----
+  const addStockModal = document.getElementById("addStockModal");
+  document.getElementById("addStockForm").addEventListener("submit", onSubmitAddStock);
+  document.getElementById("addStockModalClose").addEventListener("click", () => closeModal(addStockModal));
+  document.getElementById("addStockModalCancel").addEventListener("click", () => closeModal(addStockModal));
+  addStockModal.addEventListener("click", (e) => { if (e.target === addStockModal) closeModal(addStockModal); });
+
+  const q = query(col.inventario, orderBy("nombre"));
+  unsub = watchCollection(q, (rows) => {
+    itemsCache = rows;
+    renderAll();
+  });
+}
+
+function fillEstadoSelect(id) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = ESTADOS_INVENTARIO.map((e) => `<option value="${e.key}">${e.label}</option>`).join("");
+}
+
+function openModal(modal) { modal.hidden = false; }
+function closeModal(modal) { modal.hidden = true; }
+
+// ---- Alta de artículo ---------------------------------------------------
+async function onAddItem(e) {
+  e.preventDefault();
+  const fecha = document.getElementById("i-fecha").value || todayISO();
+  const data = {
+    nombre: document.getElementById("i-nombre").value.trim(),
+    categoria: document.getElementById("i-categoria").value,
+    estado: document.getElementById("i-estado").value || "en_uso",
+    precio: Number(document.getElementById("i-precio").value) || 0,
+    capacidad: document.getElementById("i-capacidad").value.trim(),
+    fechaAdquisicion: fecha,
+    cantidad: Number(document.getElementById("i-cantidad").value) || 0,
+    vecesDescontado: 0,
+    fechaUltimaReposicion: fecha,
+    fechasAgotamiento: [],
+    duraciones: [],
+    historialCompras: []
+  };
+  if (!data.nombre) { toast("Ingresá un nombre"); return; }
+  const ref = await addRow(col.inventario, data);
+  pushAction(makeAddAction(`Agregar artículo: ${data.nombre}`, col.inventario, data, ref.id));
+  e.target.reset();
+  document.getElementById("i-cantidad").value = 1;
+  document.getElementById("i-estado").value = "en_uso";
+  toast("Artículo agregado");
+}
+
+// ---- Descontar 1 (registra fecha de agotamiento si llega a 0) ----------
+async function onMinus(item) {
+  const cantidadAnterior = item.cantidad || 0;
+  const nuevaCantidad = Math.max(0, cantidadAnterior - 1);
+  const before = {
+    cantidad: cantidadAnterior,
+    vecesDescontado: item.vecesDescontado || 0,
+    fechasAgotamiento: item.fechasAgotamiento || [],
+    duraciones: item.duraciones || []
+  };
+  const patch = {
+    cantidad: nuevaCantidad,
+    vecesDescontado: (item.vecesDescontado || 0) + 1
+  };
+  if (nuevaCantidad === 0 && cantidadAnterior > 0) {
+    const hoy = todayISO();
+    const fechasAgotamiento = [...(item.fechasAgotamiento || []), hoy];
+    const duraciones = [...(item.duraciones || [])];
+    if (item.fechaUltimaReposicion) {
+      const dias = daysBetween(item.fechaUltimaReposicion, hoy);
+      if (dias !== null) duraciones.push({ desde: item.fechaUltimaReposicion, hasta: hoy, dias });
+    }
+    patch.fechasAgotamiento = fechasAgotamiento;
+    patch.duraciones = duraciones;
+  }
+  await updateRow(col.inventario, item.id, patch);
+  const after = {
+    cantidad: patch.cantidad,
+    vecesDescontado: patch.vecesDescontado,
+    fechasAgotamiento: patch.fechasAgotamiento || before.fechasAgotamiento,
+    duraciones: patch.duraciones || before.duraciones
+  };
+  pushAction(makeUpdateAction(`Descontar 1: ${item.nombre}`, col.inventario, item.id, before, after));
+}
+
+async function onDelete(id) {
+  const item = itemsCache.find((i) => i.id === id);
+  await deleteRow(col.inventario, id);
+  if (item) {
+    pushAction(makeDeleteAction(`Eliminar artículo: ${item.nombre}`, col.inventario, id, stripId(item)));
+  }
+  toast("Artículo eliminado");
+}
+
+// ---- Mover de columna (En stock ⇄ En uso ⇄ A reponer) --------------------
+async function onMoveEstado(item, dir) {
+  const idx = ESTADOS_INVENTARIO.findIndex((e) => e.key === (item.estado || "en_uso"));
+  const destino = ESTADOS_INVENTARIO[idx + dir];
+  if (!destino) return;
+  const before = { estado: item.estado || "en_uso" };
+  const after = { estado: destino.key };
+  await updateRow(col.inventario, item.id, after);
+  pushAction(makeUpdateAction(`Mover: ${item.nombre} → ${destino.label}`, col.inventario, item.id, before, after));
+}
+
+// ---- Editar artículo (sin borrar/recargar todo) -------------------------
+function onOpenEdit(item) {
+  document.getElementById("e-id").value = item.id;
+  document.getElementById("e-nombre").value = item.nombre || "";
+  document.getElementById("e-categoria").value = item.categoria || CATEGORIAS_INVENTARIO[0];
+  document.getElementById("e-estado").value = item.estado || "en_uso";
+  document.getElementById("e-precio").value = item.precio || "";
+  document.getElementById("e-capacidad").value = item.capacidad || "";
+  document.getElementById("e-fecha").value = item.fechaAdquisicion || "";
+  document.getElementById("e-cantidad").value = item.cantidad ?? 0;
+  openModal(document.getElementById("editModal"));
+}
+
+async function onSubmitEdit(e) {
+  e.preventDefault();
+  const id = document.getElementById("e-id").value;
+  const item = itemsCache.find((i) => i.id === id);
+  const data = {
+    nombre: document.getElementById("e-nombre").value.trim(),
+    categoria: document.getElementById("e-categoria").value,
+    estado: document.getElementById("e-estado").value,
+    precio: Number(document.getElementById("e-precio").value) || 0,
+    capacidad: document.getElementById("e-capacidad").value.trim(),
+    fechaAdquisicion: document.getElementById("e-fecha").value || "",
+    cantidad: Number(document.getElementById("e-cantidad").value) || 0
+  };
+  if (!data.nombre) { toast("Ingresá un nombre"); return; }
+  await updateRow(col.inventario, id, data);
+  if (item) {
+    const before = {
+      nombre: item.nombre || "",
+      categoria: item.categoria || "",
+      estado: item.estado || "en_uso",
+      precio: item.precio || 0,
+      capacidad: item.capacidad || "",
+      fechaAdquisicion: item.fechaAdquisicion || "",
+      cantidad: item.cantidad ?? 0
+    };
+    pushAction(makeUpdateAction(`Editar artículo: ${data.nombre}`, col.inventario, id, before, data));
+  }
+  closeModal(document.getElementById("editModal"));
+  toast("Artículo actualizado");
+}
+
+// ---- + Agregar (reposición: registra compra en historial y estadísticas) --
+function onOpenAddStock(item) {
+  document.getElementById("as-id").value = item.id;
+  document.getElementById("as-fecha").value = todayISO();
+  document.getElementById("as-cantidad").value = 1;
+  document.getElementById("as-lugar").value = "";
+  document.getElementById("as-precio").value = item.precio || "";
+  openModal(document.getElementById("addStockModal"));
+}
+
+async function onSubmitAddStock(e) {
+  e.preventDefault();
+  const id = document.getElementById("as-id").value;
+  const item = itemsCache.find((i) => i.id === id);
+  if (!item) return;
+  const fecha = document.getElementById("as-fecha").value || todayISO();
+  const cantidadAgregar = Number(document.getElementById("as-cantidad").value) || 0;
+  const lugar = document.getElementById("as-lugar").value.trim();
+  const precio = Number(document.getElementById("as-precio").value) || 0;
+  if (!cantidadAgregar) { toast("Ingresá una cantidad"); return; }
+
+  const historialCompras = [...(item.historialCompras || []), { fecha, cantidad: cantidadAgregar, lugar, precio }];
+  const before = {
+    cantidad: item.cantidad || 0,
+    precio: item.precio || 0,
+    estado: item.estado || "en_uso",
+    fechaAdquisicion: item.fechaAdquisicion || "",
+    fechaUltimaReposicion: item.fechaUltimaReposicion || "",
+    historialCompras: item.historialCompras || []
+  };
+  const after = {
+    cantidad: (item.cantidad || 0) + cantidadAgregar,
+    precio: precio || item.precio || 0,
+    estado: "en_uso", // al reponerlo, vuelve a estar en uso
+    fechaAdquisicion: fecha,
+    fechaUltimaReposicion: fecha,
+    historialCompras
+  };
+  await updateRow(col.inventario, id, after);
+  pushAction(makeUpdateAction(`Agregar stock: ${item.nombre}`, col.inventario, id, before, after));
+  closeModal(document.getElementById("addStockModal"));
+  toast("Compra registrada");
+}
+
+// ---- Render ---------------------------------------------------------------
+function renderAll() {
+  renderChips();
+  renderBoard();
+  renderRecambio();
+  renderDuracion();
+  notifyUpdate();
+}
+
+function getListaComprasCount() {
+  return itemsCache.filter((i) => (i.cantidad || 0) <= 1).length;
+}
+
+function renderChips() {
+  const catWrap = document.getElementById("categoriaChips");
+  const categoriasUsadas = CATEGORIAS_INVENTARIO.filter((c) => itemsCache.some((i) => (i.categoria || "Otro") === c));
+  const catChips = ["Todas", ...categoriasUsadas];
+  catWrap.innerHTML = catChips.map((c) => {
+    const active = (c === "Todas" && !categoriaFiltro) || c === categoriaFiltro;
+    return `<button type="button" class="chip ${active ? "active" : ""}" data-chip="${c}">${c}</button>`;
+  }).join("");
+  catWrap.querySelectorAll("[data-chip]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      categoriaFiltro = btn.dataset.chip === "Todas" ? null : btn.dataset.chip;
+      renderAll();
+    });
+  });
+}
+
+function itemCard(i) {
+  const cant = i.cantidad ?? 0;
+  const stockClase = cant === 0 ? "out-stock" : cant === 1 ? "low-stock" : ""; // verde (2+) / amarillo (1) / rojo (0)
+  const idx = ESTADOS_INVENTARIO.findIndex((e) => e.key === (i.estado || "en_uso"));
+  const prev = ESTADOS_INVENTARIO[idx - 1];
+  const next = ESTADOS_INVENTARIO[idx + 1];
+  return `
+    <div class="inv-card ${stockClase}">
+      <div class="inv-card-top">
+        <span class="inv-card-name">${i.nombre}</span>
+        <span class="inv-qty">${cant}</span>
+      </div>
+      <div class="inv-card-meta">
+        ${i.categoria ? `<span class="tag">${i.categoria}</span>` : ""}${i.capacidad || ""} ${i.precio ? "· " + fmtARS(i.precio) : ""}
+      </div>
+      <div class="inv-card-actions">
+        <button class="btn-minus" data-minus="${i.id}" title="Descontar 1" ${cant <= 0 ? "disabled" : ""}>−1</button>
+        <button class="btn-plus" data-add="${i.id}" title="Agregar (registrar compra)">+</button>
+        <button class="btn-icon-sm edit" data-edit="${i.id}" title="Editar">✎</button>
+        <button class="btn-icon-sm" data-del="${i.id}" title="Eliminar">✕</button>
+        <span class="inv-move">
+          <button class="btn-outline small" data-move="${i.id}" data-dir="-1" ${prev ? "" : "disabled"} title="${prev ? "Mover a " + prev.label : ""}">←</button>
+          <button class="btn-outline small" data-move="${i.id}" data-dir="1" ${next ? "" : "disabled"} title="${next ? "Mover a " + next.label : ""}">→</button>
+        </span>
+      </div>
+    </div>
+  `;
+}
+
+function renderBoard() {
+  const board = document.getElementById("inventarioBoard");
+  let lista = itemsCache;
+  if (categoriaFiltro) lista = lista.filter((i) => (i.categoria || "Otro") === categoriaFiltro);
+  if (searchTerm) lista = lista.filter((i) => (i.nombre || "").toLowerCase().includes(searchTerm) || (i.categoria || "").toLowerCase().includes(searchTerm));
+
+  board.innerHTML = ESTADOS_INVENTARIO.map((est) => {
+    const items = lista.filter((i) => (i.estado || "en_uso") === est.key);
+    return `
+      <div class="inv-column">
+        <div class="inv-column-head">
+          <span>${est.label}</span>
+          <span class="tag ${est.tagClass}">${items.length}</span>
+        </div>
+        <div class="inv-column-body">
+          ${items.length ? items.map(itemCard).join("") : `<div class="empty-state">${searchTerm || categoriaFiltro ? "Nada acá con ese filtro." : "Nada acá."}</div>`}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  board.querySelectorAll("[data-minus]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const item = itemsCache.find((i) => i.id === btn.dataset.minus);
+      if (item) onMinus(item);
+    });
+  });
+  board.querySelectorAll("[data-add]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const item = itemsCache.find((i) => i.id === btn.dataset.add);
+      if (item) onOpenAddStock(item);
+    });
+  });
+  board.querySelectorAll("[data-move]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const item = itemsCache.find((i) => i.id === btn.dataset.move);
+      if (item) onMoveEstado(item, Number(btn.dataset.dir));
+    });
+  });
+  board.querySelectorAll("[data-edit]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const item = itemsCache.find((i) => i.id === btn.dataset.edit);
+      if (item) onOpenEdit(item);
+    });
+  });
+  board.querySelectorAll("[data-del]").forEach((btn) => {
+    btn.addEventListener("click", () => onDelete(btn.dataset.del));
+  });
+}
+
+function renderRecambio() {
+  const wrap = document.getElementById("recambioStats");
+  const top = [...itemsCache].filter((i) => (i.vecesDescontado || 0) > 0)
+    .sort((a, b) => (b.vecesDescontado || 0) - (a.vecesDescontado || 0))
+    .slice(0, 6);
+  if (!top.length) { wrap.innerHTML = `<div class="empty-state">Todavía no hay historial de consumo.</div>`; return; }
+  const max = top[0].vecesDescontado || 1;
+  wrap.innerHTML = top.map((i) => `
+    <div class="stat-bar-row">
+      <div class="stat-bar-labels"><span>${i.nombre}</span><span>${i.vecesDescontado} veces</span></div>
+      <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${(i.vecesDescontado / max) * 100}%"></div></div>
+    </div>
+  `).join("");
+}
+
+function renderDuracion() {
+  const wrap = document.getElementById("duracionStats");
+  const conDuracion = itemsCache
+    .map((i) => {
+      const dur = i.duraciones || [];
+      if (!dur.length) return null;
+      const promedio = dur.reduce((s, d) => s + (d.dias || 0), 0) / dur.length;
+      return { nombre: i.nombre, promedio };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.promedio - b.promedio)
+    .slice(0, 6);
+  if (!conDuracion.length) {
+    wrap.innerHTML = `<div class="empty-state">Todavía no hay ciclos completos (repone → se agota) para medir.</div>`;
+    return;
+  }
+  const max = Math.max(...conDuracion.map((i) => i.promedio), 1);
+  wrap.innerHTML = conDuracion.map((i) => `
+    <div class="stat-bar-row">
+      <div class="stat-bar-labels"><span>${i.nombre}</span><span>${i.promedio.toFixed(0)} días</span></div>
+      <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${(i.promedio / max) * 100}%"></div></div>
+    </div>
+  `).join("");
+}
+
+// ============ ahorros.js ============
+let currentMonthAh = monthId();
+let plataformas = [];
+let saldos = {}; // plataformaId -> {inicio, fin, movimientos}
+let unsubPlataformas = null, unsubSaldos = null;
+let saldosLoadedOnce = false; // evita reconstruir los inputs en cada eco de Firestore
+
+function initAhorros() {
+  document.getElementById("prevMonthAh").addEventListener("click", () => switchMonthAhorros(shiftMonth(currentMonthAh, -1)));
+  document.getElementById("nextMonthAh").addEventListener("click", () => switchMonthAhorros(shiftMonth(currentMonthAh, 1)));
+  document.getElementById("plataformaForm").addEventListener("submit", onAddPlataforma);
+
+  unsubPlataformas = watchCollection(query(col.plataformas, orderBy("nombre")), (rows) => {
+    plataformas = rows;
+    renderGrid();
+  });
+
+  switchMonthAhorros(currentMonthAh);
+}
+
+async function onAddPlataforma(e) {
+  e.preventDefault();
+  const nombre = document.getElementById("p-nombre").value.trim();
+  const moneda = document.getElementById("p-moneda").value;
+  if (!nombre) return;
+  const ref = await addRow(col.plataformas, { nombre, moneda });
+  pushAction(makeAddAction(`Agregar plataforma: ${nombre}`, col.plataformas, { nombre, moneda }, ref.id));
+  e.target.reset();
+  toast("Plataforma agregada");
+}
+
+function switchMonthAhorros(mesId) {
+  currentMonthAh = mesId;
+  document.getElementById("monthLabelAh").textContent = monthLabel(mesId);
+  if (unsubSaldos) unsubSaldos();
+  saldosLoadedOnce = false;
+  const q = query(col.saldos, where("mes", "==", mesId));
+  unsubSaldos = watchCollection(q, (rows) => {
+    saldos = {};
+    rows.forEach((r) => (saldos[r.plataformaId] = r));
+    if (!saldosLoadedOnce) {
+      // primera carga del mes: acá sí hace falta pintar los inputs con sus valores iniciales
+      saldosLoadedOnce = true;
+      renderGrid();
+    } else {
+      // ecos de nuestros propios guardados: solo actualizar los resultados,
+      // nunca reconstruir los inputs (eso es lo que te cortaba el tipeo)
+      renderResultados();
+      renderTotales();
+    }
+  });
+}
+
+function saveSaldo(plataformaId, field, value) {
+  const num = Number(value) || 0;
+  const prev = saldos[plataformaId] || {};
+  const data = { mes: currentMonthAh, plataformaId, inicio: prev.inicio || 0, fin: prev.fin || 0, movimientos: prev.movimientos || 0 };
+  data[field] = num;
+  saldos[plataformaId] = data;
+  const id = `${currentMonthAh}__${plataformaId}`;
+  upsertDoc(col.saldos, id, data);
+  renderTotales();
+}
+
+function renderGrid() {
+  const wrap = document.getElementById("ahorrosGrid");
+  if (!plataformas.length) {
+    wrap.innerHTML = `<div class="empty-state">Agregá una plataforma para empezar (Efectivo, Cuenta bancaria, Broker/PPI...).</div>`;
+    renderTotales();
+    return;
+  }
+  rerenderPreservingFocus(wrap, () => {
+    wrap.innerHTML = plataformas.map((p) => {
+      const s = saldos[p.id] || { inicio: 0, fin: 0, movimientos: 0 };
+      const ganancia = (s.fin || 0) - (s.inicio || 0) - (s.movimientos || 0);
+      const rendimiento = s.inicio ? (ganancia / s.inicio) * 100 : 0;
+      const cls = ganancia >= 0 ? "positive" : "negative";
+      return `
+        <div class="ahorro-card">
+          <div class="ahorro-card-head">
+            <h3>${p.nombre}</h3>
+            <span class="tag">${p.moneda}</span>
+          </div>
+          <div class="ahorro-fields">
+            <div class="field-row">
+              <label>Inicio</label>
+              <input type="number" step="0.01" inputmode="decimal" data-field="inicio" data-pid="${p.id}" value="${s.inicio || 0}">
+            </div>
+            <div class="field-row">
+              <label>Fin</label>
+              <input type="number" step="0.01" inputmode="decimal" data-field="fin" data-pid="${p.id}" value="${s.fin || 0}">
+            </div>
+            <div class="field-row">
+              <label>Aportes/retiros netos</label>
+              <input type="number" step="0.01" inputmode="decimal" data-field="movimientos" data-pid="${p.id}" value="${s.movimientos || 0}">
+            </div>
+          </div>
+          <div class="ahorro-result">
+            <span>Ganancia: <span class="${cls}" id="ganancia-${p.id}">${p.moneda === "USD" ? "US$" : "$"}${ganancia.toLocaleString("es-AR", { maximumFractionDigits: 2 })}</span></span>
+            <span>Rendimiento: <span class="${cls}" id="rendimiento-${p.id}">${rendimiento.toFixed(2)}%</span></span>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    wrap.querySelectorAll("input[data-field]").forEach((input) => {
+      input.addEventListener("input", debounce((e) => {
+        saveSaldo(e.target.dataset.pid, e.target.dataset.field, e.target.value);
+        renderResultados();
+        renderTotales();
+      }, 600));
+    });
+  });
+
+  renderTotales();
+}
+
+function renderResultados() {
+  plataformas.forEach((p) => {
+    const s = saldos[p.id] || { inicio: 0, fin: 0, movimientos: 0 };
+    const ganancia = (s.fin || 0) - (s.inicio || 0) - (s.movimientos || 0);
+    const rendimiento = s.inicio ? (ganancia / s.inicio) * 100 : 0;
+    const cls = ganancia >= 0 ? "positive" : "negative";
+    const gEl = document.getElementById(`ganancia-${p.id}`);
+    const rEl = document.getElementById(`rendimiento-${p.id}`);
+    if (gEl) {
+      gEl.textContent = `${p.moneda === "USD" ? "US$" : "$"}${ganancia.toLocaleString("es-AR", { maximumFractionDigits: 2 })}`;
+      gEl.className = cls;
+    }
+    if (rEl) {
+      rEl.textContent = `${rendimiento.toFixed(2)}%`;
+      rEl.className = cls;
+    }
+  });
+}
+
+function toARS(monto, moneda) {
+  return moneda === "USD" ? (monto || 0) * getCotizacion() : (monto || 0);
+}
+
+function renderTotales() {
+  let inicioTotal = 0, finTotal = 0, movTotal = 0;
+  plataformas.forEach((p) => {
+    const s = saldos[p.id] || { inicio: 0, fin: 0, movimientos: 0 };
+    inicioTotal += toARS(s.inicio, p.moneda);
+    finTotal += toARS(s.fin, p.moneda);
+    movTotal += toARS(s.movimientos, p.moneda);
+  });
+  const rendimiento = inicioTotal ? ((finTotal - inicioTotal - movTotal) / inicioTotal) * 100 : 0;
+  document.getElementById("out-patrimonioInicio").textContent = fmtARS(inicioTotal);
+  document.getElementById("out-patrimonioFin").textContent = fmtARS(finTotal);
+  document.getElementById("out-rendimientoMes").textContent = rendimiento.toFixed(2) + "%";
+}
+
+// ============ main.js ============
+// ---- Tabs -------------------------------------------------------------
+const tabButtons = document.querySelectorAll(".tab-btn");
+const views = document.querySelectorAll(".view");
+
+tabButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const target = btn.dataset.target;
+    tabButtons.forEach((b) => b.classList.toggle("active", b === btn));
+    views.forEach((v) => (v.hidden = v.dataset.view !== target));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+});
+
+// ---- Cotización del dólar ----------------------------------------------
+const dolarInput = document.getElementById("dolarInput");
+const dolarApiBtn = document.getElementById("dolarApiBtn");
+
+watchDoc(col.config, "cotizacion", (data) => {
+  const valor = data?.valor || 1000;
+  dolarInput.value = valor;
+  setCotizacion(valor);
+});
+
+dolarInput.addEventListener("input", debounce(() => {
+  const valor = Number(dolarInput.value) || 0;
+  setCotizacion(valor);
+  upsertDoc(col.config, "cotizacion", { valor, modo: "manual", fecha: new Date().toISOString() });
+}, 500));
+
+dolarApiBtn.addEventListener("click", async () => {
+  dolarApiBtn.textContent = "…";
+  try {
+    // API pública, referencia BNA (sin necesidad de key)
+    const res = await fetch("https://dolarapi.com/v1/dolares/oficial");
+    if (!res.ok) throw new Error("api error");
+    const data = await res.json();
+    const valor = data.venta || data.compra;
+    if (!valor) throw new Error("sin valor");
+    dolarInput.value = valor;
+    setCotizacion(valor);
+    await upsertDoc(col.config, "cotizacion", { valor, modo: "api", fecha: new Date().toISOString() });
+    toast("Cotización actualizada");
+  } catch (err) {
+    toast("No se pudo traer la cotización");
+    console.error(err);
+  } finally {
+    dolarApiBtn.textContent = "↻";
+  }
+});
+
+// ---- Pills del header (datos en vivo de gastos + inventario) -----------
+function renderHeroStats() {
+  const wrap = document.getElementById("heroStats");
+  const compras = getListaComprasCount();
+  const tarjeta = gastoTarjetaARS();
+  const cuadra = getCajaCuadra();
+  const pills = [];
+  pills.push(compras > 0
+    ? `<span class="hero-pill pill-danger">🛒 ${compras} por reponer</span>`
+    : `<span class="hero-pill">🛒 Stock al día</span>`);
+  if (tarjeta > 0) pills.push(`<span class="hero-pill pill-amber">💳 Tarjeta: ${fmtARS(tarjeta)}</span>`);
+  pills.push(cuadra
+    ? `<span class="hero-pill">✅ Caja cuadra</span>`
+    : `<span class="hero-pill pill-danger">⚠ Caja descuadrada</span>`);
+  wrap.innerHTML = pills.join("");
+}
+onUpdate(renderHeroStats);
+
+window.addEventListener("casita:error", (e) => {
+  toast("Error de conexión con la base de datos — revisá la consola (F12)");
+  console.error(e.detail);
+});
+
+// ---- Arranque de módulos ------------------------------------------------
+initHistoryUI();
+initGastos();
+initInventario();
+initAhorros();
+renderHeroStats();
+</script>
 </body>
 </html>
