@@ -1604,20 +1604,18 @@ async function onAddFijo(e) {
 // editar el monto acá afecta este mes y, al pisar también el catálogo,
 // todos los que vengan, sin tocar los ya pasados.
 function renderFijoRow(g) {
-  const fijo = fijosCache.find((f) => f.id === g.fijoId);
   return `
     <div class="list-row ok">
       <div class="list-row-main">
-        <div class="list-row-title"><span class="tag">${g.categoria || "Sin categoría"}</span>${g.detalle || fijo?.nombre || "—"}</div>
+        <div class="list-row-title"><span class="tag">${g.categoria || "Sin categoría"}</span>${g.detalle || "—"}</div>
         <div class="list-row-meta">${g.formaPago || ""} ${g.entidad ? "· " + g.entidad : ""} · se aplica todos los meses</div>
       </div>
       <div class="list-row-actions">
         <span style="font-size:12px;color:var(--ink-faint);">${g.moneda === "USD" ? "US$" : "$"}</span>
         <input type="number" class="fijo-monto-input" step="0.01" data-fijo-gasto="${g.id}" data-fijo-cat="${g.fijoId || ""}" value="${g.monto || 0}">
-        <button class="btn-icon-sm" data-quitar-mes="${g.id}" title="Quitar solo este mes">✕</button>
+        <button class="btn-icon-sm" data-eliminar-fijo="${g.id}" data-fijo-id="${g.fijoId || ""}" title="Eliminar este gasto fijo (no se vuelve a cargar en ningún mes)">✕</button>
       </div>
     </div>
-    ${fijo ? `<div style="text-align:right;margin:-6px 0 8px;"><button type="button" class="btn-outline small" data-dejar-repetir="${fijo.id}" data-nombre="${fijo.nombre}">Dejar de repetir este gasto</button></div>` : ""}
   `;
 }
 
@@ -1633,25 +1631,20 @@ function wireFijoRowEvents(wrap) {
       }
     }, 600));
   });
-  wrap.querySelectorAll("[data-quitar-mes]").forEach((btn) => {
+  // Un solo botón: borra el gasto fijo del todo (catálogo + la instancia de
+  // este mes). Al borrar el catálogo, ya no se vuelve a aplicar en ningún
+  // mes futuro. Deshacer restaura el catálogo, y eso solo alcanza para que
+  // este mes se regenere solo (mismo ID determinístico de siempre).
+  wrap.querySelectorAll("[data-eliminar-fijo]").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      const g = gastosCache.find((x) => x.id === btn.dataset.quitarMes);
-      await deleteRow(col.gastos, btn.dataset.quitarMes);
-      if (g && g.fijoId) {
-        const quitados = [...(mesData.gastosFijosQuitados || []), g.fijoId];
-        mesData = { ...mesData, gastosFijosQuitados: quitados };
-        await upsertDoc(col.meses, currentMonth, { gastosFijosQuitados: quitados });
+      const g = gastosCache.find((x) => x.id === btn.dataset.eliminarFijo);
+      const f = fijosCache.find((x) => x.id === btn.dataset.fijoId);
+      if (g) await deleteRow(col.gastos, g.id);
+      if (f) {
+        await deleteRow(col.gastosFijos, f.id);
+        pushAction(makeDeleteAction(`Eliminar gasto fijo: ${f.nombre}`, col.gastosFijos, f.id, stripId(f)));
       }
-      if (g) pushAction(makeDeleteAction(`Quitar gasto fijo (solo este mes): ${g.detalle}`, col.gastos, g.id, stripId(g)));
-      toast("Se quitó de este mes — el próximo mes se vuelve a cargar solo");
-    });
-  });
-  wrap.querySelectorAll("[data-dejar-repetir]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const f = fijosCache.find((x) => x.id === btn.dataset.dejarRepetir);
-      await deleteRow(col.gastosFijos, btn.dataset.dejarRepetir);
-      if (f) pushAction(makeDeleteAction(`Dejar de repetir: ${f.nombre}`, col.gastosFijos, f.id, stripId(f)));
-      toast(`"${btn.dataset.nombre}" no se va a volver a cargar — este mes queda como está`);
+      toast("Gasto fijo eliminado — no se va a volver a cargar");
     });
   });
 }
@@ -1662,9 +1655,7 @@ function wireFijoRowEvents(wrap) {
 // duplicaba). Así, sin importar cuántas veces se llame esta función — por
 // dos listeners en simultáneo, por una recarga interrumpida, por lo que
 // sea — siempre termina pisando el MISMO documento, nunca crea uno nuevo.
-// "Quitar solo este mes" se guarda aparte, en meses/{mes}.gastosFijosQuitados
-// (una lista de fijoId que este mes NO hay que aplicar); "Dejar de repetir"
-// borra la plantilla del catálogo y ya no vuelve a aparecer en ningún mes.
+// Un gasto fijo solo deja de aplicarse si se borra del catálogo (botón ✕).
 //
 // Compatibilidad con meses cargados antes de este cambio: esos gastos fijos
 // quedaron con un ID al azar (no el determinístico de ahora). Antes de crear
@@ -1676,8 +1667,7 @@ async function aplicarFijosDelMes() {
   if (!mes || !fijosCache.length) return;
   if (mesesAplicandoFijos.has(mes)) return;
 
-  const quitados = mesData.gastosFijosQuitados || [];
-  const activos = fijosCache.filter((f) => f.activo !== false && !quitados.includes(f.id));
+  const activos = fijosCache.filter((f) => f.activo !== false);
   if (!activos.length) return;
 
   const yaAplicados = new Set(
