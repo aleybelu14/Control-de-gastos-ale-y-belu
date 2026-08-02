@@ -39,8 +39,30 @@ export function initGastos() {
 
   document.getElementById("gastosSearch").addEventListener("input", (e) => {
     gastosSearchTerm = e.target.value.trim().toLowerCase();
-    renderGastos();
+    renderGastosUnificados();
   });
+
+  // ---- Botones "+ ..." que muestran/ocultan los formularios ----
+  const panelFijo = document.getElementById("panelFijo");
+  const panelGasto = document.getElementById("panelGasto");
+  document.getElementById("toggleFijoMes").addEventListener("click", () => {
+    panelGasto.hidden = true;
+    document.getElementById("panelFijoTitle").textContent = "Agregar gasto fijo del mes";
+    document.getElementById("f-formaPago").value = "TRANS";
+    panelFijo.hidden = false;
+  });
+  document.getElementById("toggleFijoTarjeta").addEventListener("click", () => {
+    panelGasto.hidden = true;
+    document.getElementById("panelFijoTitle").textContent = "Agregar gasto fijo de la tarjeta";
+    document.getElementById("f-formaPago").value = "CRED";
+    panelFijo.hidden = false;
+  });
+  document.getElementById("toggleNuevoGasto").addEventListener("click", () => {
+    panelFijo.hidden = true;
+    panelGasto.hidden = false;
+  });
+  document.getElementById("panelFijoClose").addEventListener("click", () => (panelFijo.hidden = true));
+  document.getElementById("panelGastoClose").addEventListener("click", () => (panelGasto.hidden = true));
 
   // ---- Modal: editar gasto ----
   const editGastoModal = document.getElementById("editGastoModal");
@@ -113,10 +135,7 @@ async function switchMonth(mesId) {
   const qGastos = query(col.gastos, where("mes", "==", mesId));
   unsubGastos = watchCollection(qGastos, (rows) => {
     gastosCache = rows.slice().sort((a, b) => (b.fecha || "").localeCompare(a.fecha || ""));
-    renderGastos();
-    renderTarjeta();
-    renderFijosDelMes();
-    renderFijosTarjeta();
+    renderGastosUnificados();
     render();
   });
 }
@@ -188,6 +207,7 @@ async function onAddGasto(e) {
   pushAction(makeAddAction(`Agregar gasto: ${data.detalle || data.categoria}`, col.gastos, data, ref.id));
   e.target.reset();
   document.getElementById("g-fecha").value = new Date().toISOString().slice(0, 10);
+  document.getElementById("panelGasto").hidden = true;
   toast("Gasto agregado");
 }
 
@@ -243,58 +263,34 @@ function matchesSearch(g, term) {
   return [g.detalle, g.categoria, g.entidad, g.formaPago].some((v) => (v || "").toLowerCase().includes(term));
 }
 
-function renderGastos() {
+function renderGastosUnificados() {
   const wrap = document.getElementById("gastosList");
-  const lista = gastosCache.filter((g) => !esTarjeta(g) && !g.esFijo && matchesSearch(g, gastosSearchTerm));
-  if (!lista.length) {
-    wrap.innerHTML = `<div class="empty-state">${gastosSearchTerm ? "No hay gastos que coincidan con la búsqueda." : "Todavía no cargaste gastos este mes."}</div>`;
+  const term = gastosSearchTerm;
+  const filtrados = gastosCache.filter((g) => matchesSearch(g, term));
+
+  const fijosMes = filtrados.filter((g) => g.esFijo && !esTarjeta(g));
+  const fijosTarjeta = filtrados.filter((g) => g.esFijo && esTarjeta(g));
+  const tarjetaSueltos = filtrados.filter((g) => !g.esFijo && esTarjeta(g));
+  const comunes = filtrados.filter((g) => !g.esFijo && !esTarjeta(g))
+    .slice().sort((a, b) => (a.fecha || "").localeCompare(b.fecha || "")); // cronológico: primer día arriba
+
+  if (!filtrados.length) {
+    wrap.innerHTML = `<div class="empty-state">${term ? "No hay gastos que coincidan con la búsqueda." : "Todavía no cargaste gastos este mes."}</div>`;
     return;
   }
-  wrap.innerHTML = lista.map((g) => `
-    <div class="list-row">
-      <div class="list-row-main">
-        <div class="list-row-title"><span class="tag">${g.categoria || "Sin categoría"}</span>${g.detalle || "—"}</div>
-        <div class="list-row-meta">${g.fecha || ""} · ${g.formaPago || ""} ${g.entidad ? "· " + g.entidad : ""}</div>
-      </div>
-      <div class="list-row-actions">
-        <span class="list-row-amount ${g.moneda === "USD" ? "usd" : ""}">${g.moneda === "USD" ? fmtUSD(g.monto) : fmtARS(g.monto)}</span>
-        <button class="btn-icon-sm edit" data-editg="${g.id}" title="Editar">✎</button>
-        <button class="btn-icon-sm" data-del="${g.id}" title="Eliminar">✕</button>
-      </div>
-    </div>
-  `).join("");
-  wrap.querySelectorAll("[data-editg]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const g = gastosCache.find((x) => x.id === btn.dataset.editg);
-      if (g) onOpenEditGasto(g);
-    });
-  });
-  wrap.querySelectorAll("[data-del]").forEach((btn) => {
-    btn.addEventListener("click", () => onDeleteGasto(btn.dataset.del));
-  });
-}
 
-function renderTarjeta() {
-  const wrap = document.getElementById("tarjetaList");
-  const lista = gastosCache.filter((g) => esTarjeta(g) && !g.esFijo);
-  const totalLista = gastosCache.filter(esTarjeta);
-  document.getElementById("tag-cantidadTarjeta").textContent = `${totalLista.length} gasto${totalLista.length === 1 ? "" : "s"}`;
-  if (!lista.length) {
-    wrap.innerHTML = `<div class="empty-state">Sin gastos sueltos con tarjeta este mes (los fijos están en la card de arriba).</div>`;
-  } else {
-    wrap.innerHTML = lista.map((g) => `
-      <div class="list-row warn">
-        <div class="list-row-main">
-          <div class="list-row-title"><span class="tag amber">${g.categoria || "Sin categoría"}</span>${g.detalle || "—"}</div>
-          <div class="list-row-meta">${g.fecha || ""} ${g.entidad ? "· " + g.entidad : ""}</div>
-        </div>
-        <div class="list-row-actions">
-          <span class="list-row-amount ${g.moneda === "USD" ? "usd" : ""}">${g.moneda === "USD" ? fmtUSD(g.monto) : fmtARS(g.monto)}</span>
-          <button class="btn-icon-sm edit" data-editg="${g.id}" title="Editar">✎</button>
-          <button class="btn-icon-sm" data-del="${g.id}" title="Eliminar">✕</button>
-        </div>
-      </div>
-    `).join("");
+  const totalTarjeta = [...fijosTarjeta, ...tarjetaSueltos]
+    .reduce((s, g) => s + (g.moneda === "USD" ? (g.monto || 0) * cotizacion : (g.monto || 0)), 0);
+
+  let html = "";
+  if (fijosMes.length) html += `<div class="gastos-subhead">Gastos fijos del mes</div>` + fijosMes.map(renderFijoRow).join("");
+  if (fijosTarjeta.length) html += `<div class="gastos-subhead">Gastos fijos en tarjeta</div>` + fijosTarjeta.map(renderFijoRow).join("");
+  if (tarjetaSueltos.length) html += `<div class="gastos-subhead">Tarjeta de crédito${totalTarjeta ? " · " + fmtARS(totalTarjeta) : ""}</div>` + tarjetaSueltos.map(gastoRow).join("");
+  if (comunes.length) html += `<div class="gastos-subhead">Gastos del mes</div>` + comunes.map(gastoRow).join("");
+
+  rerenderPreservingFocus(wrap, () => {
+    wrap.innerHTML = html;
+    wireFijoRowEvents(wrap);
     wrap.querySelectorAll("[data-editg]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const g = gastosCache.find((x) => x.id === btn.dataset.editg);
@@ -304,9 +300,24 @@ function renderTarjeta() {
     wrap.querySelectorAll("[data-del]").forEach((btn) => {
       btn.addEventListener("click", () => onDeleteGasto(btn.dataset.del));
     });
-  }
-  const total = totalLista.reduce((s, g) => s + (g.moneda === "USD" ? (g.monto || 0) * cotizacion : (g.monto || 0)), 0);
-  document.getElementById("out-totalTarjeta").textContent = fmtARS(total);
+  });
+}
+
+function gastoRow(g) {
+  const esCred = esTarjeta(g);
+  return `
+    <div class="list-row ${esCred ? "warn" : ""}">
+      <div class="list-row-main">
+        <div class="list-row-title"><span class="tag ${esCred ? "amber" : ""}">${g.categoria || "Sin categoría"}</span>${g.detalle || "—"}</div>
+        <div class="list-row-meta">${g.fecha || ""} · ${g.formaPago || ""} ${g.entidad ? "· " + g.entidad : ""}</div>
+      </div>
+      <div class="list-row-actions">
+        <span class="list-row-amount ${g.moneda === "USD" ? "usd" : ""}">${g.moneda === "USD" ? fmtUSD(g.monto) : fmtARS(g.monto)}</span>
+        <button class="btn-icon-sm edit" data-editg="${g.id}" title="Editar">✎</button>
+        <button class="btn-icon-sm" data-del="${g.id}" title="Eliminar">✕</button>
+      </div>
+    </div>
+  `;
 }
 
 // ---- Gastos fijos (catálogo) ---------------------------------------------
@@ -325,6 +336,7 @@ async function onAddFijo(e) {
   const ref = await addRow(col.gastosFijos, data);
   pushAction(makeAddAction(`Agregar gasto fijo: ${data.nombre}`, col.gastosFijos, data, ref.id));
   e.target.reset();
+  document.getElementById("panelFijo").hidden = true;
   toast("Gasto fijo agregado — se va a cargar solo cada mes");
 }
 
@@ -380,61 +392,48 @@ function wireFijoRowEvents(wrap) {
   });
 }
 
-function renderFijosDelMes() {
-  const wrap = document.getElementById("fijosList");
-  const lista = gastosCache.filter((g) => g.esFijo && !esTarjeta(g));
-  rerenderPreservingFocus(wrap, () => {
-    if (!lista.length) {
-      wrap.innerHTML = `<div class="empty-state">Todavía no cargaste gastos fijos.</div>`;
-      return;
-    }
-    wrap.innerHTML = lista.map(renderFijoRow).join("");
-    wireFijoRowEvents(wrap);
-  });
-}
-
-function renderFijosTarjeta() {
-  const wrap = document.getElementById("fijosTarjetaList");
-  const lista = gastosCache.filter((g) => g.esFijo && esTarjeta(g));
-  rerenderPreservingFocus(wrap, () => {
-    if (!lista.length) {
-      wrap.innerHTML = `<div class="empty-state">Todavía no tenés suscripciones o gastos fijos en tarjeta.</div>`;
-      return;
-    }
-    wrap.innerHTML = lista.map(renderFijoRow).join("");
-    wireFijoRowEvents(wrap);
-  });
-}
-
 // Aplica los gastos fijos activos al mes actual, una sola vez por mes y por
 // fijo (queda registrado en meses/{mes}.gastosFijosAplicados). Si el usuario
 // borra manualmente el gasto generado ese mes ("Quitar solo este mes"), no
 // vuelve a aparecer. Si borra la plantilla completa ("Dejar de repetir"),
 // tampoco se vuelve a aplicar en ningún mes futuro.
+//
+// Se llama desde varios listeners (mes, fijos) que pueden disparar casi al
+// mismo tiempo (típicamente al hacer F5) — el lock evita que dos llamadas
+// simultáneas lean "todavía no se aplicó" y agreguen el mismo gasto dos veces.
+const mesesAplicandoFijos = new Set();
 async function aplicarFijosDelMes() {
-  if (!currentMonth || !fijosCache.length) return;
+  const mes = currentMonth;
+  if (!mes || !fijosCache.length) return;
+  if (mesesAplicandoFijos.has(mes)) return;
+
   const aplicados = mesData.gastosFijosAplicados || [];
   const pendientes = fijosCache.filter((f) => f.activo !== false && !aplicados.includes(f.id));
   if (!pendientes.length) return;
 
-  const nuevosAplicados = [...aplicados];
-  for (const f of pendientes) {
-    await addRow(col.gastos, {
-      mes: currentMonth,
-      fecha: `${currentMonth}-01`,
-      monto: f.monto || 0,
-      moneda: f.moneda || "ARS",
-      categoria: f.categoria || "Otro",
-      detalle: f.nombre,
-      formaPago: f.formaPago || "TRANS",
-      entidad: f.entidad || "",
-      esFijo: true,
-      fijoId: f.id
-    });
-    nuevosAplicados.push(f.id);
+  mesesAplicandoFijos.add(mes);
+  try {
+    const nuevosAplicados = [...aplicados];
+    for (const f of pendientes) {
+      await addRow(col.gastos, {
+        mes,
+        fecha: `${mes}-01`,
+        monto: f.monto || 0,
+        moneda: f.moneda || "ARS",
+        categoria: f.categoria || "Otro",
+        detalle: f.nombre,
+        formaPago: f.formaPago || "TRANS",
+        entidad: f.entidad || "",
+        esFijo: true,
+        fijoId: f.id
+      });
+      nuevosAplicados.push(f.id);
+    }
+    if (currentMonth === mes) mesData = { ...mesData, gastosFijosAplicados: nuevosAplicados };
+    await upsertDoc(col.meses, mes, { gastosFijosAplicados: nuevosAplicados });
+  } finally {
+    mesesAplicandoFijos.delete(mes);
   }
-  mesData = { ...mesData, gastosFijosAplicados: nuevosAplicados };
-  await upsertDoc(col.meses, currentMonth, { gastosFijosAplicados: nuevosAplicados });
 }
 
 // ---- Cálculos y render de totales ------------------------------------

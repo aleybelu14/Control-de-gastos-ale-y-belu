@@ -300,6 +300,11 @@ input, select{ -webkit-appearance: none; appearance: none; }
    LISTS: gastos, inventario, lista de compras, fijos
    ========================================================= */
 .gastos-list, .inventario-list, .lista-compras, .ahorros-grid, .fijos-list, .tarjeta-list{ display: flex; flex-direction: column; gap: 10px; }
+.gastos-subhead{
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--ink-faint); margin: 14px 0 2px; padding-top: 10px; border-top: 1px dashed var(--line);
+}
+.gastos-subhead:first-child{ margin-top: 0; padding-top: 0; border-top: none; }
 
 .list-row{
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -331,22 +336,30 @@ input, select{ -webkit-appearance: none; appearance: none; }
   border-radius: var(--radius-sm); padding: 6px 8px; text-align: right; font-weight: 700;
 }
 
-/* Inventory item card */
-.estado-select{
-  border: 1px solid var(--line); background: var(--surface-sunken);
-  border-radius: var(--radius-sm); padding: 6px 8px; font-size: 12px; font-weight: 700; color: var(--ink);
-  flex-shrink: 0;
+/* Inventory board (3 columnas: En stock | En uso | A reponer) */
+.inv-board{ display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 900px){
+  .inv-board{ grid-template-columns: repeat(3, 1fr); }
 }
-.inv-row{ display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--green); border-radius: var(--radius-sm); flex-wrap: wrap; }
-.inv-row.low-stock{ border-left-color: var(--amber); background: var(--amber-soft); }
-.inv-row.out-stock{ border-left-color: var(--red); background: var(--red-soft); }
-.inv-row-info{ flex: 1; min-width: 120px; }
-.inv-row-name{ font-weight: 700; font-size: 14px; }
-.inv-row-meta{ font-size: 12px; color: var(--ink-faint); margin-top: 2px; }
-.inv-qty{ font-weight: 800; font-size: 18px; min-width: 22px; text-align: center; }
-.inv-actions{ display: flex; align-items: center; gap: 6px; }
-
-.lista-compras .list-row{ border-left-color: var(--red); background: var(--red-soft); }
+.inv-column{ background: var(--surface-sunken); border-radius: var(--radius); padding: 12px; }
+.inv-column-head{
+  display: flex; align-items: center; justify-content: space-between;
+  font-weight: 800; font-size: 13px; padding: 2px 4px 10px;
+}
+.inv-column-body{ display: flex; flex-direction: column; gap: 10px; min-height: 48px; }
+.inv-card{
+  background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--green);
+  border-radius: var(--radius-sm); padding: 10px 12px;
+}
+.inv-card.low-stock{ border-left-color: var(--amber); background: var(--amber-soft); }
+.inv-card.out-stock{ border-left-color: var(--red); background: var(--red-soft); }
+.inv-card-top{ display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.inv-card-name{ font-weight: 700; font-size: 13.5px; }
+.inv-qty{ font-weight: 800; font-size: 16px; }
+.inv-card-meta{ font-size: 11.5px; color: var(--ink-faint); margin-top: 4px; }
+.inv-card-actions{ display: flex; align-items: center; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+.inv-move{ display: flex; gap: 4px; margin-left: auto; }
+.inv-move .btn-outline.small{ padding: 4px 9px; }
 
 /* Ahorros platform card */
 .ahorro-card{ background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 14px; }

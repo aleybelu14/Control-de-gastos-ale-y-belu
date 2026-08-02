@@ -7,7 +7,6 @@ import { pushAction, makeAddAction, makeDeleteAction, makeUpdateAction, stripId 
 let itemsCache = [];
 let unsub = null;
 let categoriaFiltro = null; // null = todas
-let estadoFiltro = null;    // null = todos
 let searchTerm = "";
 
 export function initInventario() {
@@ -51,9 +50,6 @@ function fillSelect(id, options) {
 function fillEstadoSelect(id) {
   const sel = document.getElementById(id);
   sel.innerHTML = ESTADOS_INVENTARIO.map((e) => `<option value="${e.key}">${e.label}</option>`).join("");
-}
-function estadoInfo(key) {
-  return ESTADOS_INVENTARIO.find((e) => e.key === key) || ESTADOS_INVENTARIO[1];
 }
 
 function openModal(modal) { modal.hidden = false; }
@@ -130,12 +126,15 @@ async function onDelete(id) {
   toast("Artículo eliminado");
 }
 
-// ---- Cambiar estado (En stock / En uso / A reponer) ----------------------
-async function onChangeEstado(item, nuevoEstado) {
+// ---- Mover de columna (En stock ⇄ En uso ⇄ A reponer) --------------------
+async function onMoveEstado(item, dir) {
+  const idx = ESTADOS_INVENTARIO.findIndex((e) => e.key === (item.estado || "en_uso"));
+  const destino = ESTADOS_INVENTARIO[idx + dir];
+  if (!destino) return;
   const before = { estado: item.estado || "en_uso" };
-  const after = { estado: nuevoEstado };
+  const after = { estado: destino.key };
   await updateRow(col.inventario, item.id, after);
-  pushAction(makeUpdateAction(`Cambiar estado: ${item.nombre} → ${estadoInfo(nuevoEstado).label}`, col.inventario, item.id, before, after));
+  pushAction(makeUpdateAction(`Mover: ${item.nombre} → ${destino.label}`, col.inventario, item.id, before, after));
 }
 
 // ---- Editar artículo (sin borrar/recargar todo) -------------------------
@@ -229,7 +228,7 @@ async function onSubmitAddStock(e) {
 // ---- Render ---------------------------------------------------------------
 function renderAll() {
   renderChips();
-  renderInventario();
+  renderBoard();
   renderRecambio();
   renderDuracion();
   notifyUpdate();
@@ -253,84 +252,83 @@ function renderChips() {
       renderAll();
     });
   });
-
-  const estWrap = document.getElementById("estadoChips");
-  const estChips = [{ key: null, label: "Todos los estados" }, ...ESTADOS_INVENTARIO.map((e) => ({ key: e.key, label: e.label }))];
-  estWrap.innerHTML = estChips.map((e) => {
-    const active = e.key === estadoFiltro;
-    return `<button type="button" class="chip ${active ? "active" : ""}" data-estchip="${e.key ?? ""}">${e.label}</button>`;
-  }).join("");
-  estWrap.querySelectorAll("[data-estchip]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      estadoFiltro = btn.dataset.estchip === "" ? null : btn.dataset.estchip;
-      renderAll();
-    });
-  });
 }
 
-function renderInventario() {
-  const wrap = document.getElementById("inventarioList");
-  let lista = itemsCache;
-  if (categoriaFiltro) lista = lista.filter((i) => (i.categoria || "Otro") === categoriaFiltro);
-  if (estadoFiltro) lista = lista.filter((i) => (i.estado || "en_uso") === estadoFiltro);
-  if (searchTerm) lista = lista.filter((i) => (i.nombre || "").toLowerCase().includes(searchTerm) || (i.categoria || "").toLowerCase().includes(searchTerm));
-
-  if (!lista.length) {
-    wrap.innerHTML = `<div class="empty-state">${searchTerm || categoriaFiltro || estadoFiltro ? "Nada que coincida con el filtro." : "Todavía no cargaste artículos."}</div>`;
-    return;
-  }
-  wrap.innerHTML = lista.map((i) => {
-    const cant = i.cantidad ?? 0;
-    const stockClase = cant === 0 ? "out-stock" : cant === 1 ? "low-stock" : ""; // verde (2+) / amarillo (1) / rojo (0)
-    const est = estadoInfo(i.estado || "en_uso");
-    return `
-    <div class="inv-row ${stockClase}">
-      <button class="btn-minus" data-minus="${i.id}" title="Descontar 1" ${cant <= 0 ? "disabled" : ""}>−1</button>
-      <button class="btn-plus" data-add="${i.id}" title="Agregar (registrar compra)">+</button>
-      <div class="inv-row-info">
-        <div class="inv-row-name">${i.nombre}</div>
-        <div class="inv-row-meta">
-          ${i.categoria ? `<span class="tag">${i.categoria}</span>` : ""}<span class="tag ${est.tagClass}">${est.label}</span>
-          ${i.capacidad || ""} ${i.precio ? "· " + fmtARS(i.precio) : ""}
-          ${i.fechaAdquisicion ? "· desde " + fmtDate(i.fechaAdquisicion) : ""}
-        </div>
+function itemCard(i) {
+  const cant = i.cantidad ?? 0;
+  const stockClase = cant === 0 ? "out-stock" : cant === 1 ? "low-stock" : ""; // verde (2+) / amarillo (1) / rojo (0)
+  const idx = ESTADOS_INVENTARIO.findIndex((e) => e.key === (i.estado || "en_uso"));
+  const prev = ESTADOS_INVENTARIO[idx - 1];
+  const next = ESTADOS_INVENTARIO[idx + 1];
+  return `
+    <div class="inv-card ${stockClase}">
+      <div class="inv-card-top">
+        <span class="inv-card-name">${i.nombre}</span>
+        <span class="inv-qty">${cant}</span>
       </div>
-      <select class="estado-select" data-estado-sel="${i.id}">
-        ${ESTADOS_INVENTARIO.map((e) => `<option value="${e.key}" ${e.key === (i.estado || "en_uso") ? "selected" : ""}>${e.label}</option>`).join("")}
-      </select>
-      <div class="inv-qty">${cant}</div>
-      <div class="inv-actions">
+      <div class="inv-card-meta">
+        ${i.categoria ? `<span class="tag">${i.categoria}</span>` : ""}${i.capacidad || ""} ${i.precio ? "· " + fmtARS(i.precio) : ""}
+      </div>
+      <div class="inv-card-actions">
+        <button class="btn-minus" data-minus="${i.id}" title="Descontar 1" ${cant <= 0 ? "disabled" : ""}>−1</button>
+        <button class="btn-plus" data-add="${i.id}" title="Agregar (registrar compra)">+</button>
         <button class="btn-icon-sm edit" data-edit="${i.id}" title="Editar">✎</button>
         <button class="btn-icon-sm" data-del="${i.id}" title="Eliminar">✕</button>
+        <span class="inv-move">
+          <button class="btn-outline small" data-move="${i.id}" data-dir="-1" ${prev ? "" : "disabled"} title="${prev ? "Mover a " + prev.label : ""}">←</button>
+          <button class="btn-outline small" data-move="${i.id}" data-dir="1" ${next ? "" : "disabled"} title="${next ? "Mover a " + next.label : ""}">→</button>
+        </span>
       </div>
     </div>
   `;
+}
+
+function renderBoard() {
+  const board = document.getElementById("inventarioBoard");
+  let lista = itemsCache;
+  if (categoriaFiltro) lista = lista.filter((i) => (i.categoria || "Otro") === categoriaFiltro);
+  if (searchTerm) lista = lista.filter((i) => (i.nombre || "").toLowerCase().includes(searchTerm) || (i.categoria || "").toLowerCase().includes(searchTerm));
+
+  board.innerHTML = ESTADOS_INVENTARIO.map((est) => {
+    const items = lista.filter((i) => (i.estado || "en_uso") === est.key);
+    return `
+      <div class="inv-column">
+        <div class="inv-column-head">
+          <span>${est.label}</span>
+          <span class="tag ${est.tagClass}">${items.length}</span>
+        </div>
+        <div class="inv-column-body">
+          ${items.length ? items.map(itemCard).join("") : `<div class="empty-state">${searchTerm || categoriaFiltro ? "Nada acá con ese filtro." : "Nada acá."}</div>`}
+        </div>
+      </div>
+    `;
   }).join("");
-  wrap.querySelectorAll("[data-minus]").forEach((btn) => {
+
+  board.querySelectorAll("[data-minus]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const item = itemsCache.find((i) => i.id === btn.dataset.minus);
       if (item) onMinus(item);
     });
   });
-  wrap.querySelectorAll("[data-add]").forEach((btn) => {
+  board.querySelectorAll("[data-add]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const item = itemsCache.find((i) => i.id === btn.dataset.add);
       if (item) onOpenAddStock(item);
     });
   });
-  wrap.querySelectorAll("[data-estado-sel]").forEach((sel) => {
-    sel.addEventListener("change", () => {
-      const item = itemsCache.find((i) => i.id === sel.dataset.estadoSel);
-      if (item) onChangeEstado(item, sel.value);
+  board.querySelectorAll("[data-move]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const item = itemsCache.find((i) => i.id === btn.dataset.move);
+      if (item) onMoveEstado(item, Number(btn.dataset.dir));
     });
   });
-  wrap.querySelectorAll("[data-edit]").forEach((btn) => {
+  board.querySelectorAll("[data-edit]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const item = itemsCache.find((i) => i.id === btn.dataset.edit);
       if (item) onOpenEdit(item);
     });
   });
-  wrap.querySelectorAll("[data-del]").forEach((btn) => {
+  board.querySelectorAll("[data-del]").forEach((btn) => {
     btn.addEventListener("click", () => onDelete(btn.dataset.del));
   });
 }

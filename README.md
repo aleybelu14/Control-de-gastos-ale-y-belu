@@ -111,6 +111,7 @@ próximas veces que se aplique, no los gastos ya generados.
 {
   "nombre": "Papel higiénico",
   "categoria": "Baño",
+  "estado": "en_uso",
   "precio": 4200,
   "capacidad": "4 rollos",
   "fechaAdquisicion": "2026-03-15",
@@ -125,11 +126,16 @@ próximas veces que se aplique, no los gastos ya generados.
   "createdAt": "<serverTimestamp>"
 }
 ```
+`estado` es uno de `"stock"` / `"en_uso"` / `"reponer"` y define en qué
+columna del tablero aparece el artículo (En stock | En uso | A
+reponer, tipo to-do/doing/done). Se mueve con los botones ← / → de
+cada tarjeta, no automáticamente. Al registrar una reposición con el
+botón "+" vuelve a `"en_uso"`.
+
 `vecesDescontado` se incrementa cada vez que se usa el botón "-1" y
-alimenta la estadística "Mayor recambio". Cuando `cantidad` llega a
-`1` **o** a `0`, el artículo aparece en la Lista de compras
-automática (es un filtro en el cliente, no un campo separado) — a
-`0` sigue existiendo el artículo, solo que sin stock.
+alimenta la estadística "Mayor recambio". El color del borde de cada
+tarjeta (verde/amarillo/rojo) depende de `cantidad` — 2 o más, 1, o 0
+— independientemente de la columna en la que esté.
 
 Cada vez que el botón "-1" hace que `cantidad` llegue a `0`, se
 guarda la fecha en `fechasAgotamiento` y se cierra un ciclo en
